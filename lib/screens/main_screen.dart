@@ -1,0 +1,123 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:floating_search_bar/floating_search_bar.dart';
+import 'package:google_maps_webservice/places.dart';
+import 'package:flutter_google_places/flutter_google_places.dart';
+import '../animations/circleBoxAnimation.dart';
+import '../ui-helper.dart';
+import 'package:simple_animations/simple_animations.dart';
+import '../widgets/list_button.dart';
+import '../widgets/add_widget.dart';
+import '../widgets/simple_button.dart';
+import '../screens/map_screen.dart';
+import '../screens/list_screen.dart';
+
+class MainScreen extends StatefulWidget {
+  @override
+  _MapScreenState createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MainScreen> {
+  double get _explorePercent {
+    return screenWidth / currentMapPosition;
+  }
+
+  final _mapKey = GlobalKey<MapScreenState>();
+  CustomAnimationControl _control = CustomAnimationControl.STOP;
+  bool _isMap = true;
+  double currentMapPosition=0;
+
+  @override
+  Widget build(BuildContext context) {
+    screenHeight = MediaQuery.of(context).size.height;
+    screenWidth = MediaQuery.of(context).size.width;
+    return Scaffold(
+        body: SizedBox(
+      width: screenWidth,
+      height: screenHeight,
+      child: Stack(children: [
+        !_isMap ? MapScreen(key: _mapKey) : ListScreen(),
+        _isMap
+            ? Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(top: 50.0),
+                  child: RaisedButton(
+                    color: Theme.of(context).buttonColor,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(30))),
+                    onPressed: () {
+                      setState(() {
+                        _isMap = !_isMap;
+                      });
+                    },
+                    child: Text("Search Here"),
+                  ),
+                ),
+              )
+            : Container(),
+        ToggleButtonWidget(
+          isMap:_isMap,
+          onTap: () {
+            setState(() {
+              _isMap = !_isMap;
+            });
+          },
+          currentX: currentMapPosition,
+          onUpdate: (value) {
+            print(currentMapPosition);
+            setState(() {
+
+              currentMapPosition += value.delta.dx;
+              if(currentMapPosition>screenWidth){
+                currentMapPosition=screenWidth;
+              }
+              else if(currentMapPosition<=0){
+                currentMapPosition=0;
+              }
+            });
+          },
+          onDispatch: _dispatchExploreOffset,
+        ),
+        SimpleButtonWidget(
+          onTap: () {
+            _mapKey.currentState.animateToUserLocation();
+          },
+          icon: _isMap ? Icons.my_location : Icons.filter_list,
+          isTop: false,
+          isLeft: _isMap ? false : true,
+        ),
+        SimpleButtonWidget(
+          icon: Icons.search,
+          isTop: true,
+          isLeft: false,
+        ),
+        SimpleButtonWidget(
+          icon: Icons.settings,
+          isTop: true,
+          isLeft: true,
+        ),
+        AddWidget(),
+      ]),
+    ));
+  }
+
+  void _dispatchExploreOffset(_) {
+    if (!_isMap) {
+      if (_explorePercent < 0.3) {
+        _isMap = false;
+      } else {
+        _isMap = true;
+      }
+    } else {
+      if (_explorePercent> 0.6) {
+        _isMap=true;
+      } else {
+        _isMap=false;
+      }
+    }
+  setState(() {
+
+  });
+  }
+}

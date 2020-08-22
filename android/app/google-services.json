@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "186824824458",
+    "firebase_url": "https://standuppaddle-26b70.firebaseio.com",
+    "project_id": "standuppaddle-26b70",
+    "storage_bucket": "standuppaddle-26b70.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:186824824458:android:17a56165dd217869df3f73",
+        "android_client_info": {
+          "package_name": "com.example.sup"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "186824824458-hesb0fn4ra568bk82sus2v0p04uebua9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.sup",
+            "certificate_hash": "17f8de503d349940bf48e5bfa3e6b0352ebd3d9a"
+          }
+        },
+        {
+          "client_id": "186824824458-3inhetshq3koacdj1db0evo15o70jcmu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXrzVjPZEEwb6-DlGrSis0cY-8iDXTaDY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "186824824458-3inhetshq3koacdj1db0evo15o70jcmu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
