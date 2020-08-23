@@ -17,12 +17,13 @@ class MapScreenState extends State<MapScreen> {
 
   Location location = Location();
   GoogleMapController mapController;
+  LocationData _pos;
 
   void animateToUserLocation() async {
-    var pos = await location.getLocation();
+    _pos = await location.getLocation();
     mapController.animateCamera(
       CameraUpdate.newCameraPosition(
-        CameraPosition(target: LatLng(pos.latitude, pos.longitude), zoom: 17.0),
+        CameraPosition(target: LatLng(_pos.latitude, _pos.longitude), zoom: 17.0),
       ),
     );
   }
@@ -30,12 +31,15 @@ class MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return GoogleMap(
+      mapToolbarEnabled: false,
+      myLocationButtonEnabled: false,
+      compassEnabled: true,
       myLocationEnabled:
           true, // Add little blue dot for device location, requires permission from user
-      mapType: MapType.hybrid,
+      mapType: MapType.normal,
 
       initialCameraPosition:
-          CameraPosition(target: LatLng(24.150, -110.32), zoom: 10),
+          _pos==null?CameraPosition(target: LatLng(24.150, -110.32), zoom: 10):CameraPosition(target: LatLng(_pos.latitude, _pos.longitude)),
       onMapCreated: (controller) {
         setState(() {
           mapController = controller;

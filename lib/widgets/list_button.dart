@@ -30,7 +30,7 @@ ToggleButtonWidget({this.isMap, this.onTap, this.currentX, this.onUpdate, this.o
           width: realW(392 / 5.0),
           height: realH(70),
           padding: EdgeInsets.only(left:20.0, right: 20.0),
-          child: Icon(!isMap?Icons.format_list_numbered:Icons.location_on, size: realW(35.0),color: Colors.white,),
+          child: Icon(isMap?Icons.format_list_numbered:Icons.location_on, size: realW(35.0),color: Colors.white,),
         ),
       ),
     );

@@ -48,6 +48,10 @@ dev_dependencies:
   location: ^3.0.2
   google_maps_flutter: ^0.5.30
   geoflutterfire: ^2.1.0
+  image_picker: ^0.6.7+6
+  flutter_svg: ^0.18.1
+
+
 
 
 
@@ -87,6 +91,10 @@ flutter:
     - search.png
     - avatar.png
     - lable.png
+    - sup_board.png
+    - sup.svg
+    - sup_high.png
+    - sup_ultra_high.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.

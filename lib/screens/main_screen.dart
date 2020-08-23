@@ -36,7 +36,7 @@ class _MapScreenState extends State<MainScreen> {
       width: screenWidth,
       height: screenHeight,
       child: Stack(children: [
-        !_isMap ? MapScreen(key: _mapKey) : ListScreen(),
+        _isMap ? MapScreen(key: _mapKey) : ListScreen(),
         _isMap
             ? Align(
                 alignment: Alignment.topCenter,
@@ -57,27 +57,13 @@ class _MapScreenState extends State<MainScreen> {
               )
             : Container(),
         ToggleButtonWidget(
+          currentX: 0,
           isMap:_isMap,
           onTap: () {
             setState(() {
               _isMap = !_isMap;
             });
           },
-          currentX: currentMapPosition,
-          onUpdate: (value) {
-            print(currentMapPosition);
-            setState(() {
-
-              currentMapPosition += value.delta.dx;
-              if(currentMapPosition>screenWidth){
-                currentMapPosition=screenWidth;
-              }
-              else if(currentMapPosition<=0){
-                currentMapPosition=0;
-              }
-            });
-          },
-          onDispatch: _dispatchExploreOffset,
         ),
         SimpleButtonWidget(
           onTap: () {
