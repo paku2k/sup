@@ -3,12 +3,15 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import '../ui-helper.dart';
+import 'dart:math';
+import 'package:location/location.dart';
 
 final double _expandedWidth = 392.0;
 final double _retractedWidth = 120.0;
 
 class AddWidget extends StatefulWidget {
-  AddWidget();
+  final Function opacityCallback;
+  AddWidget(this.opacityCallback);
   @override
   _ToggleButtonWidgetState createState() => _ToggleButtonWidgetState();
 }
@@ -35,20 +38,20 @@ class _ToggleButtonWidgetState extends State<AddWidget>
   }
 
   void animateAdd(bool open) {
-    final RenderBox _renderBoxContainer =
-        _containerKey.currentContext.findRenderObject();
-    _renderHeight = _renderBoxContainer.size.height;
+    getRenderBox(null);
     animationControllerAdd = AnimationController(
         duration: Duration(
             milliseconds: 1 +
                 (800 * (isExpanded ? currentPercent : (1 - currentPercent)))
                     .toInt()),
         vsync: this);
-    curve = CurvedAnimation(parent: animationControllerAdd, curve: Curves.easeOutQuart);
+    curve = CurvedAnimation(
+        parent: animationControllerAdd, curve: Curves.easeOutQuart);
     animation = Tween(begin: _currentX, end: open ? _renderHeight - 80.0 : 0.0)
         .animate(curve)
           ..addListener(() {
             setState(() {
+              widget.opacityCallback(currentPercent);
               _currentX = animation.value;
             });
           })
@@ -60,13 +63,20 @@ class _ToggleButtonWidgetState extends State<AddWidget>
     animationControllerAdd.forward();
   }
 
+  void getRenderBox(_) {
+    final RenderBox _renderBoxContainer =
+        _containerKey.currentContext.findRenderObject();
+    _renderHeight = _renderBoxContainer.size.height;
+  }
+
   void onAddVerticalUpdate(details) {
     _currentX -= details.delta.dy;
-    if (_currentX > _renderHeight-80.0) {
-      _currentX = _renderHeight-80.0;
+    if (_currentX > _renderHeight - 80.0) {
+      _currentX = _renderHeight - 80.0;
     } else if (_currentX < 0) {
       _currentX = 0;
     }
+    widget.opacityCallback(currentPercent);
     setState(() {});
   }
 
@@ -93,6 +103,10 @@ class _ToggleButtonWidgetState extends State<AddWidget>
   GlobalKey _containerKey = GlobalKey();
   double _renderHeight;
 
+  TextEditingController _descriptionController = TextEditingController();
+  TextEditingController _titleController = TextEditingController();
+  LocationData _location;
+
   List<File> _images = [];
   bool _imageDelete = false;
   bool _pickedImage = false;
@@ -103,12 +117,22 @@ class _ToggleButtonWidgetState extends State<AddWidget>
   double _difficulty = 0.0;
   double _currentX = 0.0;
 
+  AnimationController fabController;
+  AnimationController fab2Controller;
+
   double get currentPercent {
     return _currentX / _renderHeight;
   }
 
   @override
   Widget build(BuildContext context) {
+    fabController =
+        AnimationController(vsync: this, duration: Duration(milliseconds: 200))
+          ..forward();
+    fab2Controller =
+    AnimationController(vsync: this, duration: Duration(milliseconds: 200))
+      ..forward();
+
     return Positioned(
       top: realH(802.0 - 79.0),
       left: realW((392 / 2) - _expandedWidth / 2),
@@ -128,6 +152,7 @@ class _ToggleButtonWidgetState extends State<AddWidget>
             onTap: () {
               animateAdd(!isExpanded);
             },
+            onVerticalDragStart: getRenderBox,
             onVerticalDragUpdate: onAddVerticalUpdate,
             onVerticalDragEnd: (_) => _dispatchDrag(),
             child: Column(
@@ -149,9 +174,26 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                           _buildLocationPicker(),
                           ConstrainedBox(
                             constraints: BoxConstraints(
-                                maxWidth: realW(_expandedWidth * 0.65)),
-                            child: TextField(
-                              decoration: InputDecoration(hintText: "Title"),
+                                maxWidth: realW(_expandedWidth * 0.7)),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(30)),
+                                color: Colors.white,
+                              ),
+                              child: TextFormField(
+                                controller: _titleController,
+                                decoration: InputDecoration(
+                                  hintText: "Title",
+                                  border: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  errorBorder: InputBorder.none,
+                                  disabledBorder: InputBorder.none,
+                                ),
+                              ),
                             ),
                           ),
                           SizedBox(
@@ -160,9 +202,34 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                           ConstrainedBox(
                             constraints: BoxConstraints(
                                 maxWidth: realW(_expandedWidth * 0.70)),
-                            child: TextField(
-                              decoration:
-                                  InputDecoration(hintText: "Description"),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(25)),
+                                color: Colors.white,
+                              ),
+                              child: TextFormField(
+                                validator: (value) {
+                                  if (value == null) {
+                                    return 'Please enter a title';
+                                  }
+                                  return null;
+                                },
+                                controller: _descriptionController,
+                                scrollPhysics: BouncingScrollPhysics(),
+                                minLines: 3,
+                                maxLines: 5,
+                                decoration: InputDecoration(
+                                  hintText: "Description",
+                                  border: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  errorBorder: InputBorder.none,
+                                  disabledBorder: InputBorder.none,
+                                ),
+                              ),
                             ),
                           ),
                           SizedBox(
@@ -199,98 +266,6 @@ class _ToggleButtonWidgetState extends State<AddWidget>
     );
   }
 
-//  Widget _buildImagePicker() {
-//    return _pickedImage
-//        ? Padding(
-//            padding: EdgeInsets.only(top: 20.0, bottom: 20.0),
-//            child: GestureDetector(
-//              onTap: () {
-//                setState(() {
-//                  _imageDelete = !_imageDelete;
-//                });
-//              },
-//              child: Column(children: [
-//
-//                SizedBox(
-//                  width: realW(_expandedWidth - 50.0),
-//                  height: realH(200.0),
-//                  child: Stack(children: [
-//                    Image.asset(
-//                      "assets/map.png",
-//                      width: realW(_expandedWidth - 50.0),
-//                      height: realH(200.0),
-//                      fit: BoxFit.cover,
-//                    ),
-//                    _imageDelete
-//                        ? BackdropFilter(
-//                            filter: ImageFilter.blur(
-//                              sigmaX: 10.0,
-//                              sigmaY: 10.0,
-//                            ),
-//                            child: Container(
-//                              width: realW(_expandedWidth - 50.0),
-//                              height: realH(200.0),
-//                              color: Colors.white.withOpacity(0.0),
-//                            ))
-//                        : Container(),
-//                    if (_imageDelete)
-//                      Align(
-//                          alignment: Alignment.center,
-//                          child: Row(
-//                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-//                            mainAxisSize: MainAxisSize.max,
-//                            children: <Widget>[
-//                              SizedBox(width: 20.0),
-//                              Transform.scale(
-//                                  scale: 1.2,
-//                                  child: FloatingActionButton(
-//                                    child: IconButton(
-//                                        onPressed: () {
-//                                          setState(() {
-//                                            _pickedImage = false;
-//                                          });
-//                                        },
-//                                        icon: Icon(Icons.delete)),
-//                                  )),
-//                              SizedBox(width: 20.0),
-//                            ],
-//                          ))
-//                    else
-//                      Container(),
-//                  ]),
-//                ),
-//              ]),
-//            ),
-//          )
-//        : SingleChildScrollView(
-//            scrollDirection: Axis.horizontal,
-//            child: Column(
-//              mainAxisSize: MainAxisSize.max,
-//              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-//              children: <Widget>[
-//                Text(
-//                  'Image',
-//                  style: Theme.of(context).textTheme.headline6,
-//                ),
-//                SizedBox(height: 15.0),
-//                Row(
-//                  children: [
-//                    FloatingActionButton(
-//                      onPressed: (){},
-//                      child:Icon(Icons.photo),
-//                    ),
-//                    SizedBox(width: 15.0),
-//                    FloatingActionButton(
-//                      onPressed: (){},
-//                      child:Icon(Icons.camera_alt),
-//                    ),
-//                  ],
-//                ),
-//              ],
-//            ),
-//          );
-//  }
-
   Widget _buildImagePicker() {
     return SizedBox(
       width: realW(_expandedWidth - 70.0),
@@ -302,6 +277,7 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                 child: GestureDetector(
                   onTap: () {
                     setState(() {
+                      fabController.forward();
                       _imageDelete = !_imageDelete;
                     });
                   },
@@ -317,18 +293,6 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                           fit: BoxFit.cover,
                         ),
                       ),
-                      _imageDelete
-                          ? BackdropFilter(
-                              filter: ImageFilter.blur(
-                                sigmaX: 10.0,
-                                sigmaY: 10.0,
-                              ),
-                              child: Container(
-                                width: realW(_expandedWidth - 50.0),
-                                height: realH(200.0),
-                                color: Colors.white.withOpacity(0.0),
-                              ))
-                          : Container(),
                       if (_imageDelete)
                         Align(
                             alignment: Alignment.center,
@@ -337,26 +301,42 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                               mainAxisSize: MainAxisSize.max,
                               children: <Widget>[
                                 SizedBox(width: 20),
-                                Transform.scale(
-                                  scale: 1.2,
-                                  child: FloatingActionButton(
-                                    onPressed: () {
-                                      setState(() {});
-                                    },
-                                    child: Icon(Icons.add),
-                                  ),
+                                AnimatedBuilder(
+                                  animation: fabController,
+                                  builder: (context, child) {
+                                    return Transform.scale(
+                                      scale: fabController.value*1.2,
+                                      child: Transform.rotate(
+                                        angle: fabController.value*1.0*pi,
+                                        child: FloatingActionButton(
+                                          onPressed: () {
+                                            setState(() {});
+                                          },
+                                          child: Icon(Icons.add),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                                 SizedBox(width: 20.0),
-                                Transform.scale(
-                                  scale: 1.2,
-                                  child: FloatingActionButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _pickedImage = false;
-                                      });
-                                    },
-                                    child: Icon(Icons.delete),
-                                  ),
+                                AnimatedBuilder(
+                                  animation: fabController,
+                                  builder: (context, child) {
+                                    return Transform.scale(
+                                      scale: fabController.value*1.2,
+                                      child: Transform.rotate(
+                                        angle: (fabController.value+1)*1.0*pi,
+                                        child: FloatingActionButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _pickedImage=false;
+                                            });
+                                          },
+                                          child: Icon(Icons.delete),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                                 SizedBox(width: 20.0),
                               ],
@@ -388,12 +368,14 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                                 source: ImageSource.gallery,
                                 maxWidth: 1000,
                                 imageQuality: 50);
-                            _images.add(File(_imageResource.path));
-                            setState(() {
-                              _imageNumber++;
-                              _pickedImage = true;
-                              _imageDelete = false;
-                            });
+                            if (_imageResource != null) {
+                              _images.add(File(_imageResource.path));
+                              setState(() {
+                                _imageNumber++;
+                                _pickedImage = true;
+                                _imageDelete = false;
+                              });
+                            }
                           },
                           child: Icon(Icons.image),
                         ),
@@ -405,12 +387,14 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                                 source: ImageSource.camera,
                                 maxWidth: 1000,
                                 imageQuality: 50);
-                            _images.add(File(_imageResource.path));
-                            setState(() {
-                              _imageNumber++;
-                              _pickedImage = true;
-                              _imageDelete = false;
-                            });
+                            if (_imageResource != null) {
+                              _images.add(File(_imageResource.path));
+                              setState(() {
+                                _imageNumber++;
+                                _pickedImage = true;
+                                _imageDelete = false;
+                              });
+                            }
                           },
                           child: Icon(Icons.camera_alt),
                         ),
@@ -434,6 +418,7 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                 child: GestureDetector(
                   onTap: () {
                     setState(() {
+                      fab2Controller.forward();
                       _locationDelete = !_locationDelete;
                     });
                   },
@@ -450,18 +435,6 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                           fit: BoxFit.cover,
                         ),
                       ),
-                      _locationDelete
-                          ? BackdropFilter(
-                              filter: ImageFilter.blur(
-                                sigmaX: 10.0,
-                                sigmaY: 10.0,
-                              ),
-                              child: Container(
-                                width: realW(_expandedWidth - 50.0),
-                                height: realH(200.0),
-                                color: Colors.white.withOpacity(0.0),
-                              ))
-                          : Container(),
                       if (_locationDelete)
                         Align(
                             alignment: Alignment.center,
@@ -470,17 +443,24 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                               mainAxisSize: MainAxisSize.max,
                               children: <Widget>[
                                 SizedBox(width: 20.0),
-                                Transform.scale(
-                                  scale: 1.2,
-                                  child: FloatingActionButton(
-                                    child: IconButton(
-                                        onPressed: () {
-                                          setState(() {
-                                            _pickedLocation = false;
-                                          });
-                                        },
-                                        icon: Icon(Icons.delete)),
-                                  ),
+                                AnimatedBuilder(
+                                  animation: fab2Controller,
+                                  builder: (context, child) {
+                                    return Transform.scale(
+                                      scale: fab2Controller.value*1.2,
+                                      child: Transform.rotate(
+                                        angle: (fab2Controller.value+1)*1.0*pi,
+                                        child: FloatingActionButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _pickedLocation=false;
+                                            });
+                                          },
+                                          child: Icon(Icons.delete),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                                 SizedBox(width: 20.0),
                               ],

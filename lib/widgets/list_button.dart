@@ -15,8 +15,8 @@ ToggleButtonWidget({this.isMap, this.onTap, this.currentX, this.onUpdate, this.o
   Widget build(BuildContext context) {
     return Positioned(
       top: realH(803.0 - 150.0),
-      left: !isMap ? null : currentX,
-      right: !isMap?0.0:null,
+      left: currentX,
+
       child: GestureDetector(
         onHorizontalDragUpdate: onUpdate,
         onHorizontalDragEnd: onDispatch,
@@ -25,8 +25,7 @@ ToggleButtonWidget({this.isMap, this.onTap, this.currentX, this.onUpdate, this.o
           decoration: BoxDecoration(
               color: Theme.of(context).buttonColor,
               borderRadius: BorderRadius.horizontal(
-                  left: isMap ? Radius.zero : Radius.circular(40.0),
-                  right: isMap ? Radius.circular(40.0) : Radius.zero)),
+                  right: Radius.circular(40.0))),
           width: realW(392 / 5.0),
           height: realH(70),
           padding: EdgeInsets.only(left:20.0, right: 20.0),

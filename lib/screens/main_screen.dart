@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:floating_search_bar/floating_search_bar.dart';
@@ -18,14 +20,21 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MainScreen> {
+  double opacity = 0.0;
   double get _explorePercent {
     return screenWidth / currentMapPosition;
+  }
+
+  void opacityCallback(double pcnt) {
+    setState(() {
+      opacity = pcnt;
+    });
   }
 
   final _mapKey = GlobalKey<MapScreenState>();
   CustomAnimationControl _control = CustomAnimationControl.STOP;
   bool _isMap = true;
-  double currentMapPosition=0;
+  double currentMapPosition = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +67,7 @@ class _MapScreenState extends State<MainScreen> {
             : Container(),
         ToggleButtonWidget(
           currentX: 0,
-          isMap:_isMap,
+          isMap: _isMap,
           onTap: () {
             setState(() {
               _isMap = !_isMap;
@@ -71,11 +80,6 @@ class _MapScreenState extends State<MainScreen> {
           },
           icon: _isMap ? Icons.my_location : Icons.filter_list,
           isTop: false,
-          isLeft: _isMap ? false : true,
-        ),
-        SimpleButtonWidget(
-          icon: Icons.search,
-          isTop: true,
           isLeft: false,
         ),
         SimpleButtonWidget(
@@ -83,7 +87,25 @@ class _MapScreenState extends State<MainScreen> {
           isTop: true,
           isLeft: true,
         ),
-        AddWidget(),
+        SimpleButtonWidget(
+          icon: Icons.search,
+          isTop: true,
+          isLeft: false,
+        ),
+        opacity != 0
+            ? BackdropFilter(
+                filter: ImageFilter.blur(
+                    sigmaX: 10 * opacity, sigmaY: 10 * opacity),
+                child: Container(
+                  color: Colors.white.withOpacity(0.1 * opacity),
+                  width: screenWidth,
+                  height: screenHeight,
+                ),
+              )
+            : const Padding(
+                padding: const EdgeInsets.all(0),
+              ),
+        AddWidget(opacityCallback),
       ]),
     ));
   }
@@ -96,14 +118,12 @@ class _MapScreenState extends State<MainScreen> {
         _isMap = true;
       }
     } else {
-      if (_explorePercent> 0.6) {
-        _isMap=true;
+      if (_explorePercent > 0.6) {
+        _isMap = true;
       } else {
-        _isMap=false;
+        _isMap = false;
       }
     }
-  setState(() {
-
-  });
+    setState(() {});
   }
 }
