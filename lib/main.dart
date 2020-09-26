@@ -26,11 +26,12 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
+        
 
-        floatingActionButtonTheme: FloatingActionButtonThemeData(backgroundColor: Colors.lightBlueAccent),
-        primarySwatch: Colors.purple,
-        accentColor: Colors.blueAccent,
-        buttonColor: Colors.lightBlueAccent,
+        floatingActionButtonTheme: FloatingActionButtonThemeData(backgroundColor: Colors.deepOrangeAccent),
+        primarySwatch: Colors.deepOrange,
+        accentColor: Colors.deepOrangeAccent,
+        buttonColor: Color(0xFF1BAFC5),
 
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
@@ -38,7 +39,7 @@ class MyApp extends StatelessWidget {
         if(snapshot.hasData){
           return MainScreen();
         }
-        return MainScreen();
+        return AuthScreen();
 
       },),
     );

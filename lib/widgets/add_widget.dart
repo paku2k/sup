@@ -4,20 +4,27 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import '../ui-helper.dart';
 import 'dart:math';
+import '../location_helper.dart';
+import 'package:location/location.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
 final double _expandedWidth = 392.0;
 final double _retractedWidth = 120.0;
 
 class AddWidget extends StatefulWidget {
+  final Function addGeoPoint;
   final Function opacityCallback;
-  AddWidget(this.opacityCallback);
+  final Function locationPickerCallback;
+  //final LatLng pickedLocation;
+  AddWidget(Key key, this.opacityCallback, this.locationPickerCallback,
+      this.addGeoPoint)
+      : super(key: key);
   @override
-  _ToggleButtonWidgetState createState() => _ToggleButtonWidgetState();
+  AddWidgetState createState() => AddWidgetState();
 }
 
-class _ToggleButtonWidgetState extends State<AddWidget>
-    with TickerProviderStateMixin {
+class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
   String get _sliderLabel {
     if (_difficulty == 0.0) {
       return "Easy";
@@ -57,6 +64,9 @@ class _ToggleButtonWidgetState extends State<AddWidget>
           })
           ..addStatusListener((status) {
             if (status == AnimationStatus.completed) {
+              if (open == false) {
+                widget.opacityCallback(0.0);
+              }
               isExpanded = open;
             }
           });
@@ -96,26 +106,33 @@ class _ToggleButtonWidgetState extends State<AddWidget>
     }
   }
 
+  Location locationHandle = Location();
+
   AnimationController animationControllerAdd;
   CurvedAnimation curve;
   Animation animation;
+
+  final GlobalKey<FormState> _formKey = GlobalKey();
 
   GlobalKey _containerKey = GlobalKey();
   double _renderHeight;
 
   TextEditingController _descriptionController = TextEditingController();
   TextEditingController _titleController = TextEditingController();
-  LocationData _location;
+  LatLng location;
 
   List<File> _images = [];
   bool _imageDelete = false;
   bool _pickedImage = false;
   int _imageNumber = 0;
   bool isExpanded = false;
-  bool _pickedLocation = true;
+  int _type=0; //TODO: implement type choosing
+
   bool _locationDelete = false;
   double _difficulty = 0.0;
   double _currentX = 0.0;
+  String _title;
+  String _description;
 
   AnimationController fabController;
   AnimationController fab2Controller;
@@ -130,8 +147,8 @@ class _ToggleButtonWidgetState extends State<AddWidget>
         AnimationController(vsync: this, duration: Duration(milliseconds: 200))
           ..forward();
     fab2Controller =
-    AnimationController(vsync: this, duration: Duration(milliseconds: 200))
-      ..forward();
+        AnimationController(vsync: this, duration: Duration(milliseconds: 200))
+          ..forward();
 
     return Positioned(
       top: realH(802.0 - 79.0),
@@ -172,65 +189,72 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                             height: 5,
                           ),
                           _buildLocationPicker(),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                                maxWidth: realW(_expandedWidth * 0.7)),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(30)),
-                                color: Colors.white,
-                              ),
-                              child: TextFormField(
-                                controller: _titleController,
-                                decoration: InputDecoration(
-                                  hintText: "Title",
-                                  border: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  errorBorder: InputBorder.none,
-                                  disabledBorder: InputBorder.none,
+                          Form(
+                            key: _formKey,
+                            child: Column(children: [
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                    maxWidth: realW(_expandedWidth * 0.7)),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(30)),
+                                    color: Colors.white,
+                                  ),
+                                  child: TextFormField(
+                                    validator: (value) {
+                                      if (value.isEmpty) {
+                                        return 'Please enter a title';
+                                      }
+                                      return null;
+                                    },
+                                    onSaved: (value) => _title = value,
+                                    controller: _titleController,
+                                    decoration: InputDecoration(
+                                      hintText: "Title",
+                                      border: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      errorBorder: InputBorder.none,
+                                      disabledBorder: InputBorder.none,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          SizedBox(
-                            height: 15.0,
-                          ),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                                maxWidth: realW(_expandedWidth * 0.70)),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(25)),
-                                color: Colors.white,
+                              SizedBox(
+                                height: 15.0,
                               ),
-                              child: TextFormField(
-                                validator: (value) {
-                                  if (value == null) {
-                                    return 'Please enter a title';
-                                  }
-                                  return null;
-                                },
-                                controller: _descriptionController,
-                                scrollPhysics: BouncingScrollPhysics(),
-                                minLines: 3,
-                                maxLines: 5,
-                                decoration: InputDecoration(
-                                  hintText: "Description",
-                                  border: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  errorBorder: InputBorder.none,
-                                  disabledBorder: InputBorder.none,
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                    maxWidth: realW(_expandedWidth * 0.70)),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(25)),
+                                    color: Colors.white,
+                                  ),
+                                  child: TextFormField(
+                                    onSaved: (value) => _description = value,
+                                    controller: _descriptionController,
+                                    scrollPhysics: BouncingScrollPhysics(),
+                                    minLines: 3,
+                                    maxLines: 5,
+                                    decoration: InputDecoration(
+                                      hintText: "Description",
+                                      border: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      errorBorder: InputBorder.none,
+                                      disabledBorder: InputBorder.none,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                            ]),
                           ),
                           SizedBox(
                             height: 20.0,
@@ -242,7 +266,7 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                           )),
                           ConstrainedBox(
                             constraints: BoxConstraints(
-                                maxWidth: realW(_expandedWidth * 0.85)),
+                                maxWidth: realW(_expandedWidth * 0.85), maxHeight: 30),
                             child: Slider(
                                 inactiveColor: Colors.black,
                                 activeColor: Colors.lightBlueAccent,
@@ -257,6 +281,43 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                                 }),
                           ),
                           _buildImagePicker(),
+                          RaisedButton(
+                            color: Theme.of(context)
+                                .floatingActionButtonTheme
+                                .backgroundColor,
+                            shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(30))),
+                            onPressed: () async {
+                              if (location == null ||
+                                  !_formKey.currentState.validate()) {
+                                _formKey.currentState.validate();
+                                if (location == null) {
+                                  Scaffold.of(context).showSnackBar(SnackBar(
+                                      content:
+                                          Text('Please choose a location')));
+                                }
+                              } else {
+                                _formKey.currentState.save();
+                                var documentRef = await widget.addGeoPoint(
+                                  LatLng(location.latitude, location.longitude),
+                                  _title,
+                                  _description,
+                                  _difficulty,
+                                  _type,
+
+
+                                );
+                                print(_title);
+
+                                print(documentRef);
+                              }
+                              setState(() {});
+                            },
+                            child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [Text("Done"), Icon(Icons.check)]),
+                          ),
                         ]),
                   )
                 ]),
@@ -267,6 +328,7 @@ class _ToggleButtonWidgetState extends State<AddWidget>
   }
 
   Widget _buildImagePicker() {
+    //TODO: Build a carousel with more than one image
     return SizedBox(
       width: realW(_expandedWidth - 70.0),
       height: realH(250.0),
@@ -305,9 +367,9 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                                   animation: fabController,
                                   builder: (context, child) {
                                     return Transform.scale(
-                                      scale: fabController.value*1.2,
+                                      scale: fabController.value * 1.2,
                                       child: Transform.rotate(
-                                        angle: fabController.value*1.0*pi,
+                                        angle: fabController.value * 1.0 * pi,
                                         child: FloatingActionButton(
                                           onPressed: () {
                                             setState(() {});
@@ -323,13 +385,15 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                                   animation: fabController,
                                   builder: (context, child) {
                                     return Transform.scale(
-                                      scale: fabController.value*1.2,
+                                      scale: fabController.value * 1.2,
                                       child: Transform.rotate(
-                                        angle: (fabController.value+1)*1.0*pi,
+                                        angle: (fabController.value + 1) *
+                                            1.0 *
+                                            pi,
                                         child: FloatingActionButton(
                                           onPressed: () {
                                             setState(() {
-                                              _pickedImage=false;
+                                              _pickedImage = false;
                                             });
                                           },
                                           child: Icon(Icons.delete),
@@ -412,7 +476,7 @@ class _ToggleButtonWidgetState extends State<AddWidget>
       width: realW(_expandedWidth - 170.0),
       height: realH(200.0),
       child: Center(
-        child: _pickedLocation
+        child: location != null
             ? Padding(
                 padding: EdgeInsets.only(top: 20.0, bottom: 20.0),
                 child: GestureDetector(
@@ -428,8 +492,9 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                     child: Stack(children: [
                       ClipPath(
                         clipper: CustomClipMap(),
-                        child: Image.asset(
-                          "assets/map.png",
+                        child: Image.network(
+                          LocationHelper.generateLocationPreviewImage(
+                              lat: location.latitude, lon: location.longitude),
                           width: realW(_expandedWidth - 50.0),
                           height: realH(200.0),
                           fit: BoxFit.cover,
@@ -447,13 +512,15 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                                   animation: fab2Controller,
                                   builder: (context, child) {
                                     return Transform.scale(
-                                      scale: fab2Controller.value*1.2,
+                                      scale: fab2Controller.value * 1.2,
                                       child: Transform.rotate(
-                                        angle: (fab2Controller.value+1)*1.0*pi,
+                                        angle: (fab2Controller.value + 1) *
+                                            1.0 *
+                                            pi,
                                         child: FloatingActionButton(
                                           onPressed: () {
                                             setState(() {
-                                              _pickedLocation=false;
+                                              location = null;
                                             });
                                           },
                                           child: Icon(Icons.delete),
@@ -487,12 +554,20 @@ class _ToggleButtonWidgetState extends State<AddWidget>
                     Row(
                       children: [
                         FloatingActionButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            animateAdd(false);
+                            widget.locationPickerCallback();
+                          },
                           child: Icon(Icons.location_on),
                         ),
                         SizedBox(width: 15.0),
                         FloatingActionButton(
-                          onPressed: () {},
+                          onPressed: () async {
+                            var pos = await locationHandle.getLocation();
+                            setState(() {
+                              location = LatLng(pos.latitude, pos.longitude);
+                            });
+                          },
                           child: Icon(Icons.my_location),
                         ),
                       ],

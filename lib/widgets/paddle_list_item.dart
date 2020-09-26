@@ -16,7 +16,7 @@ class _PaddleListItemState extends State<PaddleListItem> {
     return ListTile(
 
       title: Text(widget.item.title),
-      subtitle: Text(widget.item.difficulty),
+      subtitle: Text('Easy'),
       isThreeLine: _expanded,
       trailing: IconButton(
         icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),

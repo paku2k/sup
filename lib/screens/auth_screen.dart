@@ -107,7 +107,7 @@ class _AuthScreenState extends State<AuthScreen>
                           decoration: BoxDecoration(
                               image: DecorationImage(
                                   image: AssetImage(
-                                      'assets/images/people_under_tree.png'),
+                                      'sup_ultra_high.png'),
                                   fit: BoxFit.fill)),
                         )),
                   ),
@@ -124,7 +124,7 @@ class _AuthScreenState extends State<AuthScreen>
                           decoration: BoxDecoration(
                               image: DecorationImage(
                                   image: AssetImage(
-                                      'assets/images/simple_apple.png'),
+                                      'marker_zwei.png'),
                                   fit: BoxFit.fill)),
                         )),
                   ),
