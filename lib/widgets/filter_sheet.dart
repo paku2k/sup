@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sup/credentials.dart';
 import 'package:dio/dio.dart';
 import 'dart:async';
+import 'package:uuid/uuid.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class Place {
@@ -25,6 +26,8 @@ class _FilterWidgetState extends State<FilterWidget> {
   Timer _throttle;
   int _calls = 0;
 
+  String uuid;
+
   String _heading;
   final List<Place> _displayResults = [];
   final List<Widget> _displayResultsWidget = [];
@@ -34,6 +37,7 @@ class _FilterWidgetState extends State<FilterWidget> {
   @override
   void initState() {
     super.initState();
+    uuid=Uuid().v1();
     _heading = "Suggestions";
     _searchController.addListener(_onSearchChanged);
   }
@@ -64,7 +68,7 @@ class _FilterWidgetState extends State<FilterWidget> {
         'https://maps.googleapis.com/maps/api/place/autocomplete/json';
     String type = '(regions)';
     String locRestr = 'location=50.748390, 9.935575&radius=600000&strictbounds';
-    String request = '$baseUrl?input=$text&key=$API_KEY&type=$type&$locRestr';
+    String request = '$baseUrl?input=$text&key=$API_KEY&type=$type&$locRestr&sessiontoken=$uuid';
     Response response = await Dio().get(request);
 
     _calls++;
@@ -106,7 +110,7 @@ class _FilterWidgetState extends State<FilterWidget> {
   void _pickPlaceById(String id) async {
     String baseUrl = 'https://maps.googleapis.com/maps/api/place/details/json';
     String fields = 'geometry';
-    String request = '$baseUrl?place_id=$id&key=$API_KEY&fields=$fields';
+    String request = '$baseUrl?place_id=$id&key=$API_KEY&fields=$fields&sessiontoken=$uuid';
     Response response = await Dio().get(request);
 
     final LatLng result = LatLng(
@@ -132,7 +136,7 @@ class _FilterWidgetState extends State<FilterWidget> {
             padding: const EdgeInsets.symmetric(vertical: 20.0),
             child: Center(
               child: Text(
-                "Filter",
+                "Search",
                 style: Theme.of(context)
                     .textTheme
                     .headline6
@@ -158,19 +162,7 @@ class _FilterWidgetState extends State<FilterWidget> {
             ),
           ),
           Column(children: _displayResultsWidget),
-          Slider(
-            min: 0.0,
-            max: 500.0,
-            divisions: 4,
-            value: radVal,
-            onChanged: (val) {
-              widget.updateQuery(val);
-              setState(() {
-                radVal = val;
-              });
-            },
-            label: "Radius ${radVal}km",
-          )
+
         ],
       ),
     );

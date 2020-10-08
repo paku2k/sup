@@ -6,7 +6,8 @@ class SimpleButtonWidget extends StatefulWidget {
   final Function onTap;
   final bool isTop;
   final IconData icon;
-  SimpleButtonWidget({this.onTap, this.isLeft, this.isTop, this.icon});
+  final Function onDrag;
+  SimpleButtonWidget({this.onTap, this.isLeft, this.isTop, this.icon, this.onDrag});
   @override
   _ToggleButtonWidgetState createState() => _ToggleButtonWidgetState();
 }
@@ -19,6 +20,7 @@ class _ToggleButtonWidgetState extends State<SimpleButtonWidget> {
       left: !widget.isLeft ? null : 0.0,
       right: !widget.isLeft?0.0:null,
       child: GestureDetector(
+        onHorizontalDragStart: widget.onDrag,
         onTap: widget.onTap,
         child: Container(
           decoration: BoxDecoration(

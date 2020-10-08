@@ -5,17 +5,23 @@ import 'package:location/location.dart';
 import '../model/paddle_item.dart';
 import '../widgets/simple_button.dart';
 import 'dart:ui';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MapScreen extends StatefulWidget {
   final bool locationPickerMode;
-  final Function cameraStoppedCallback;
+  final Function cameraStartedCallback;
   final Function startQuery;
   final Function locationPickerCallback;
+  final Function cameraEndedCallback;
+  final LatLng initialPosition;
   MapScreen(
       {Key key,
+        this.cameraEndedCallback,
       this.locationPickerMode,
       this.locationPickerCallback,
-      this.startQuery, this.cameraStoppedCallback})
+      this.startQuery,
+      this.cameraStartedCallback,
+      this.initialPosition})
       : super(key: key);
   @override
   @override
@@ -25,26 +31,34 @@ class MapScreen extends StatefulWidget {
 class MapScreenState extends State<MapScreen> {
   bool cameraStopped = false;
   Location location = Location();
+  LatLng userLocation;
   Set<Marker> markers = {};
+  double zoomLevel=10;
+
+  SharedPreferences prefs;
 
   GoogleMapController mapController;
-  LocationData _pos;
+  LocationData pos;
 
   Future<LocationData> animateToUserLocation() async {
-    _pos = await location.getLocation();
+    pos = await location.getLocation();
+    userLocation=LatLng(pos.latitude, pos.longitude);
+    prefs.setDouble('userLat', pos.latitude);
+    prefs.setDouble('userLon', pos.longitude);
+
     mapController.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
-            target: LatLng(_pos.latitude, _pos.longitude), zoom: 13.0),
+            target: LatLng(pos.latitude, pos.longitude), zoom: 13.0),
       ),
     );
-    return _pos;
+    return pos;
   }
 
-  void setItems(List<PaddleItem> m) {
+  void setItems(List<Marker> m) {
     markers.clear();
     m.forEach((element) {
-      markers.add(element.marker);
+      markers.add(element);
     });
     setState(() {});
   }
@@ -56,35 +70,41 @@ class MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    userLocation=widget.initialPosition;
     return GoogleMap(
       mapToolbarEnabled: false,
       myLocationButtonEnabled: false,
       compassEnabled: true,
       zoomControlsEnabled: false,
       markers: markers,
+      onTap: (_){
+        widget.cameraStartedCallback();
+      },
       onCameraMoveStarted: () {
-        print('camera started');
-        setState(() {
-          cameraStopped = false;
-        });
 
+        widget.cameraStartedCallback();
       },
+
       onCameraIdle: () {
-        print('camera idle');
-        setState(() {
-          cameraStopped = true;
-          widget.cameraStoppedCallback();
-        });
 
+
+          widget.cameraEndedCallback();
+
+        cameraStopped = true;
       },
+
       myLocationEnabled:
           true, // Add little blue dot for device location, requires permission from user
       mapType: MapType.normal,
 
-      initialCameraPosition: _pos == null
+      initialCameraPosition: widget.initialPosition == null
           ? CameraPosition(target: LatLng(24.150, -110.32), zoom: 10)
-          : CameraPosition(target: LatLng(_pos.latitude, _pos.longitude)),
+          : CameraPosition(
+              target: LatLng(widget.initialPosition.latitude,
+                  widget.initialPosition.longitude),
+              zoom: 13.0),
       onMapCreated: (controller) async {
+        prefs = await SharedPreferences.getInstance();
         setState(() {
           mapController = controller;
         });

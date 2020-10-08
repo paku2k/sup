@@ -1,9 +1,16 @@
-import 'dart:ui';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import '../widgets/info_display.dart';
 
 import 'dart:math' show cos, sqrt, asin;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 import 'package:platform/platform.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:floating_search_bar/floating_search_bar.dart';
@@ -15,7 +22,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:location/location.dart' as Loc;
 import 'package:rxdart/rxdart.dart';
 import 'dart:async';
+import 'package:fluster/fluster.dart';
 
+import '../model/custom_marker.dart';
 import '../widgets/filter_sheet.dart';
 import '../ui-helper.dart';
 import 'package:simple_animations/simple_animations.dart';
@@ -32,10 +41,15 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MainScreen> {
-  Firestore firestore = Firestore();
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
   FirebaseAuth auth;
-  UserInfo userInfo;
+  User userInfo;
+  LatLng initPos;
+  bool getFirstPosition;
   String userName;
+
+  Widget markerWindow;
+  Fluster<CustomMarker> fluster;
   Geoflutterfire geoflutterfire = Geoflutterfire();
 
   List<PaddleItem> paddleItems = [];
@@ -45,7 +59,10 @@ class _MapScreenState extends State<MainScreen> {
   Stream<dynamic> query;
   GeoFirePoint center;
 
-  BitmapDescriptor pinMarker;
+  BitmapDescriptor pinMarkerNorm;
+  BitmapDescriptor clusterMarker;
+  BitmapDescriptor pinMarkerVerbot;
+  Uint8List rawImage;
   StreamSubscription subscription;
 
   Loc.Location location = Loc.Location();
@@ -53,46 +70,67 @@ class _MapScreenState extends State<MainScreen> {
   CustomAnimationControl _control = CustomAnimationControl.STOP;
   bool _isMap = true;
   double currentMapPosition = 0;
-  double currentListPosition = 0;
-  Set<Marker> markers = {};
+  List<CustomMarker> markers = [];
   double devicePixelRatio;
+  double currentListPosition = -1.0;
+  double zoomLevel;
 
   bool locationPickerMode = false;
   LatLng pickedLocation;
   double opacity = 0.0;
-  bool cameraStopped=false;
+  bool markerWindowDirty = false;
+
+  bool dirtyScreenPosition = true;
   double get _explorePercent {
     return screenWidth / currentMapPosition;
   }
 
-  double get _listPercent {
-    return screenWidth / currentListPosition;
+  double get _listAbsolute {
+    return screenWidth * currentListPosition + screenWidth;
   }
-
-
 
   @override
   void initState() {
     _initUser();
     radius.add(50.0);
+    getFirstPosition = true;
     BitmapDescriptor.fromAssetImage(
             ImageConfiguration(devicePixelRatio: 2.5), 'marker_zwei.png')
-        .then((value) => pinMarker = value);
+        .then((BitmapDescriptor value) => pinMarkerVerbot = value);
+    BitmapDescriptor.fromAssetImage(
+            ImageConfiguration(devicePixelRatio: 2.5), 'marker_zwei.png')
+        .then((value) => pinMarkerNorm = value);
+    getBytesFromAsset('assets/m1.png', 200).then((value) {
+      rawImage = value;
+      clusterMarker = BitmapDescriptor.fromBytes(value);
+    });
+
     super.initState();
   }
 
-  void cameraStoppedCallback(){
+  void cameraStartedCallback() {
+    if (markerWindow != null && !markerWindowDirty) {
+      markerWindow = null;
+    }
+    _setFlusterMarkers();
     setState(() {
-      cameraStopped=true;
+      dirtyScreenPosition = true;
+    });
+  }
+
+  void cameraEndedCallback() {
+    markerWindowDirty = false;
+    _setFlusterMarkers();
+    setState(() {
+      dirtyScreenPosition = true;
     });
   }
 
   void _initUser() async {
     auth = FirebaseAuth.instance;
-    userInfo = await auth.currentUser();
-    var userDoc =
-        await firestore.collection('user').document(userInfo.uid).get();
-    userName = userDoc.data['name'];
+    userInfo = auth.currentUser;
+    var userDoc = await firestore.collection('user').doc(userInfo.uid).get();
+    userName = userDoc.data()['name'];
   }
 
   @override
@@ -108,12 +146,6 @@ class _MapScreenState extends State<MainScreen> {
     });
   }
 
-  void listOnDragUpdate(DragUpdateDetails position) {
-    setState(() {
-      currentListPosition = currentListPosition + position.delta.dx;
-    });
-  }
-
   void opacityCallback(double pcnt) {
     setState(() {
       opacity = pcnt;
@@ -122,11 +154,9 @@ class _MapScreenState extends State<MainScreen> {
 
   Future<double> _updateCenter(LatLng pos) async {
     LatLng screenPos;
-    if(pos==null){
+    if (pos == null) {
       screenPos = await screenPosition();
-
-    }
-    else{
+    } else {
       screenPos = pos;
     }
     final LatLngBounds zoomLevel =
@@ -160,18 +190,41 @@ class _MapScreenState extends State<MainScreen> {
           width: screenWidth,
           height: screenHeight,
           child: Stack(children: [
-            MapScreen(
-              key: _mapKey,
-              locationPickerCallback: locationPickerCallback,
-              locationPickerMode: locationPickerMode,
-              cameraStoppedCallback: cameraStoppedCallback,
-              startQuery: startQuery,
+            FutureBuilder(
+              future: SharedPreferences.getInstance(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    getFirstPosition) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasData && getFirstPosition) {
+                  var lat = snapshot.data.getDouble('userLat');
+                  var lon = snapshot.data.getDouble('userLon');
+                  if (lat != null && lon != null) {
+                    initPos = LatLng(lat, lon);
+                  }
+                  getFirstPosition = false;
+                }
+                return MapScreen(
+                  key: _mapKey,
+                  locationPickerCallback: locationPickerCallback,
+                  cameraEndedCallback: cameraEndedCallback,
+                  locationPickerMode: locationPickerMode,
+                  cameraStartedCallback: cameraStartedCallback,
+                  startQuery: startQuery,
+                  initialPosition: initPos,
+                );
+              },
             ),
-            Transform.translate(
+            /*Transform.translate(
                 offset: Offset(-(screenWidth - currentListPosition), 0),
-                child: ListScreen(_listKey)),
+                child: ListScreen(_listKey)),*/
             locationPickerMode
-                ? Center(child: Icon(Icons.pin_drop))
+                ? Center(
+                    child: Icon(
+                    Icons.pin_drop,
+                    color: Theme.of(context).accentColor,
+                  ))
                 : Container(),
             _isMap
                 ? Align(
@@ -181,26 +234,31 @@ class _MapScreenState extends State<MainScreen> {
                       child: _mapKey.currentState != null
                           ? locationPickerMode
                               ? RaisedButton(
-                                  color: Theme.of(context).buttonColor,
+                                  color: Theme.of(context).accentColor,
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.all(
                                           Radius.circular(30))),
                                   onPressed: _getScreenPosForAdd,
                                   child: Text("Choose this location"),
                                 )
-                              : RaisedButton(
-                                  color: Theme.of(context).buttonColor,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.all(
-                                          Radius.circular(30))),
-                                  onPressed: () async {
-                                    double visibleRadius =
-                                        await _updateCenter(null);
+                              : dirtyScreenPosition
+                                  ? RaisedButton(
+                                      color: Theme.of(context).buttonColor,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.all(
+                                              Radius.circular(30))),
+                                      onPressed: () async {
+                                        double visibleRadius =
+                                            await _updateCenter(null);
 
-                                    updateQuery(visibleRadius);
-                                  },
-                                  child: Text("Search here"),
-                                )
+                                        updateQuery(visibleRadius);
+                                        setState(() {
+                                          dirtyScreenPosition = false;
+                                        });
+                                      },
+                                      child: Text("Search here"),
+                                    )
+                                  : Container()
                           : Container(),
                     ),
                   )
@@ -230,9 +288,21 @@ class _MapScreenState extends State<MainScreen> {
               isLeft: false,
               onTap: () => showFilter(),
             ),
+            locationPickerMode
+                ? Container()
+                : ToggleButtonWidget(
+                    currentX: _listAbsolute,
+                    isMap: _isMap,
+                    onDrag: (_) {
+                      Navigator.of(context).push(_createRoute(paddleItems));
+                    },
+                    onTap: () {
+                      Navigator.of(context).push(_createRoute(paddleItems));
+                    },
+                  ),
             opacity != 0
                 ? BackdropFilter(
-                    filter: ImageFilter.blur(
+                    filter: ui.ImageFilter.blur(
                         sigmaX: 10 * opacity, sigmaY: 10 * opacity),
                     child: Container(
                       color: Colors.white.withOpacity(0.1 * opacity),
@@ -243,22 +313,50 @@ class _MapScreenState extends State<MainScreen> {
                 : const Padding(
                     padding: const EdgeInsets.all(0),
                   ),
-            locationPickerMode
-                ? Container()
-                : ToggleButtonWidget(
-                    currentX: currentListPosition,
-                    isMap: _isMap,
-                    onUpdate: listOnDragUpdate,
-                    onTap: () {
-                      setState(() {
-                        _isMap = !_isMap;
-                      });
-                    },
-                  ),
-            AddWidget(_addKey, opacityCallback, locationPickerCallback,
-                addPaddleItem),
+            AddWidget(
+              _addKey,
+              opacityCallback,
+              locationPickerCallback,
+              addPaddleItem,
+            ),
+            markerWindow != null && !markerWindowDirty
+                ? Positioned(
+                    left: 0,
+                    top: screenHeight * 0.5,
+                    width: screenWidth,
+                    child: markerWindow)
+                : Container(),
           ]),
         ));
+  }
+
+  Route _createRoute(List<PaddleItem> items) {
+    return PageRouteBuilder(
+      transitionDuration: Duration(milliseconds: 600),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return ListScreen(
+          items: items,
+        );
+      },
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        var begin = Offset(-1.0, 0.0);
+        var end = Offset.zero;
+        var curve = Curves.easeInOut;
+        var tween = Tween(
+          begin: begin,
+          end: end,
+        ).chain(CurveTween(curve: curve));
+        animation.addListener(() {
+          setState(() {
+            currentListPosition = animation.drive(tween).value.dx;
+          });
+        });
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: child,
+        );
+      },
+    );
   }
 
   void showFilter() {
@@ -272,14 +370,12 @@ class _MapScreenState extends State<MainScreen> {
               updateQuery: updateQuery,
               finishFilter: (LatLng target) async {
                 Navigator.of(context).pop();
-                _mapKey.currentState.cameraStopped=false;
+                _mapKey.currentState.cameraStopped = false;
                 _mapKey.currentState.mapController
                     .animateCamera(CameraUpdate.newLatLngZoom(target, 11.50));
 
-
                 final radius = await _updateCenter(target);
                 updateQuery(10.0);
-
               },
             ));
   }
@@ -305,22 +401,36 @@ class _MapScreenState extends State<MainScreen> {
     }).listen(_updateItems);
   }
 
-  Future<DocumentReference> addPaddleItem(LatLng pos, String name,
-      String description, double difficulty, int type) async {
+  Future<void> addPaddleItem(LatLng pos, String name, String description,
+      List<File> imageFile, String type) async {
+    var uuid = Uuid();
+
     GeoFirePoint point =
         geoflutterfire.point(latitude: pos.latitude, longitude: pos.longitude);
+    String imageId = uuid.v1();
+    List<String> imageURLs = [];
+    for (var i = 0; i < imageFile.length; i++) {
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('spot_images')
+          .child(imageId)
+          .child((i).toString() + '.jpg');
+      await ref.putFile(imageFile[i]).onComplete;
+      imageURLs.add(await ref.getDownloadURL());
+    }
 
-    return firestore.collection('spots').add({
+    await firestore.collection('spots').add({
+      'imageURLs': imageURLs,
       'position': point.data,
       'title': name,
       'type': type,
       'description': description,
-      'difficulty': difficulty,
       'userId': userInfo.uid,
       'userName': userName,
       'rating': -1.0,
       'ratingNo': 0,
     });
+    return;
   }
 
   double calculateDistance(lat1, lon1, lat2, lon2) {
@@ -332,39 +442,113 @@ class _MapScreenState extends State<MainScreen> {
     return 12742 * asin(sqrt(a));
   }
 
-  void _updateItems(List<DocumentSnapshot> docList) {
+  void _updateItems(List<DocumentSnapshot> docList) async {
     paddleItems.clear();
+    markers.clear();
+    print(docList);
     docList.forEach((DocumentSnapshot doc) {
-      GeoPoint pos = doc.data['position']['geopoint'];
-      String title = doc.data['title'];
-      double rating;
-      if (doc.data['rating'] != null) {
-        double rating = doc.data['rating'].toDouble();
+      GeoPoint pos = doc.data()['position']['geopoint'];
+      GeoFirePoint userLocation = GeoFirePoint(
+          _mapKey.currentState.userLocation.latitude,
+          _mapKey.currentState.userLocation.longitude);
+      double distance =
+          userLocation.distance(lat: pos.latitude, lng: pos.longitude);
+
+      String title = doc.data()['title'];
+      double rating = -1.0;
+      if (doc.data()['rating'] != null) {
+        rating = doc.data()['rating'].toDouble();
       }
-      var marker = Marker(
-        markerId: MarkerId(doc.documentID),
-        position: LatLng(pos.latitude, pos.longitude),
-        icon: pinMarker,
-        infoWindow: InfoWindow(title: title, snippet: doc.data['description']),
-      );
 
       PaddleItem item = PaddleItem(
-          id: doc.documentID,
-          marker: marker,
+          distance: distance,
+          id: doc.id,
           title: title,
-          description: doc.data['description'],
+          imageAsset: doc.data()['imageURLs'],
+          description: doc.data()['description'],
           location: LatLng(pos.latitude, pos.longitude),
-          userId: doc.data['userId'],
-          difficulty: doc.data['difficulty'],
+          userId: doc.data()['userId'],
+          difficulty: doc.data()['difficulty'],
           rating: rating,
-          ratingNo: doc.data['ratingNo'],
-          type: doc.data['type'],
-          userName: doc.data['userName']);
+          ratingNo: doc.data()['ratingNo'],
+          type: doc.data()['type'].toString(),
+          userName: doc.data()['userName']);
 
       paddleItems.add(item);
     });
-    _mapKey.currentState.setItems(paddleItems);
-    print(paddleItems.toString());
+    paddleItems.forEach((element) {
+      var marker = CustomMarker(
+        onTap: () {
+          setState(() {
+            markerWindowDirty = true;
+
+            markerWindow = InfoDisplay(element);
+          });
+        },
+        id: element.id,
+        position: element.location,
+        icon: element.type == 'Verbot' ? pinMarkerVerbot : pinMarkerNorm,
+      );
+      markers.add(marker);
+    });
+
+    _setFlusterMarkers();
+  }
+
+  Future<void> _setFlusterMarkers() async {
+    fluster = Fluster<CustomMarker>(
+        minZoom: 0, // The min zoom at clusters will show
+        maxZoom: 12, // The max zoom at clusters will show
+        radius: 150, // Cluster radius in pixels
+        extent: 1024, // Tile extent. Radius is calculated with it.
+        nodeSize: 64, // Size of the KD-tree leaf node.
+        points: markers, // The list of markers created before
+        createCluster: (
+          // Create cluster marker
+          BaseCluster cluster,
+          double lng,
+          double lat,
+        ) {
+          return CustomMarker(
+            id: cluster.id.toString(),
+            position: LatLng(lat, lng),
+            icon: clusterMarker,
+            onTap: cluster.isCluster
+                ? () {
+                    var cu = CameraUpdate.newLatLngZoom(
+                        LatLng(lat, lng), zoomLevel + 1.0);
+                    _mapKey.currentState.mapController.animateCamera(cu);
+                  }
+                : null,
+            isCluster: cluster.isCluster,
+            clusterId: cluster.id,
+            pointsSize: cluster.pointsSize,
+            childMarkerId: cluster.childMarkerId,
+          );
+        });
+
+    zoomLevel = await _mapKey.currentState.mapController.getZoomLevel();
+    final List<Marker> googleMarkers = fluster
+        .clusters([-180, -85, 180, 85], zoomLevel.round()).map((cluster) {
+      return cluster.toMarker(
+//              (){
+//        //TODO: Add number of cluster children to image marker
+//        var cu = CameraUpdate.newLatLngZoom(cluster.position, zoomLevel+1.0);
+//        _mapKey.currentState.mapController.animateCamera(cu);}
+          );
+    }).toList();
+    _mapKey.currentState.setItems(googleMarkers);
+  }
+
+  Future<Uint8List> getBytesFromAsset(String path, int width) async {
+    ByteData data = await rootBundle.load(path);
+    print('Data: $data');
+    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
+        targetWidth: width);
+    ui.FrameInfo fi = await codec.getNextFrame();
+    return (await fi.image.toByteData(format: ui.ImageByteFormat.png))
+        .buffer
+        .asUint8List();
   }
 
   Future<LatLng> screenPosition() {

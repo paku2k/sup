@@ -25,6 +25,8 @@ class AddWidget extends StatefulWidget {
 }
 
 class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
+  String dropdownValue = 'Einstiegsstelle';
+
   String get _sliderLabel {
     if (_difficulty == 0.0) {
       return "Easy";
@@ -126,7 +128,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
   bool _pickedImage = false;
   int _imageNumber = 0;
   bool isExpanded = false;
-  int _type=0; //TODO: implement type choosing
+  String _type = 'Einstiegsstelle';
 
   bool _locationDelete = false;
   double _difficulty = 0.0;
@@ -181,92 +183,158 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                     size: realW(35.0),
                     color: Colors.white,
                   ),
-                  SingleChildScrollView(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: <Widget>[
-                          SizedBox(
-                            height: 5,
-                          ),
-                          _buildLocationPicker(),
-                          Form(
-                            key: _formKey,
-                            child: Column(children: [
-                              ConstrainedBox(
-                                constraints: BoxConstraints(
-                                    maxWidth: realW(_expandedWidth * 0.7)),
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(30)),
-                                    color: Colors.white,
-                                  ),
-                                  child: TextFormField(
-                                    validator: (value) {
-                                      if (value.isEmpty) {
-                                        return 'Please enter a title';
-                                      }
-                                      return null;
-                                    },
-                                    onSaved: (value) => _title = value,
-                                    controller: _titleController,
-                                    decoration: InputDecoration(
-                                      hintText: "Title",
-                                      border: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      errorBorder: InputBorder.none,
-                                      disabledBorder: InputBorder.none,
+                  _currentX != 0.0
+                      ? SingleChildScrollView(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: <Widget>[
+                                SizedBox(
+                                  height: 5,
+                                ),
+                                _buildLocationPicker(),
+                                Form(
+                                  key: _formKey,
+                                  child: Column(children: [
+                                    ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                          maxWidth:
+                                              realW(_expandedWidth * 0.7)),
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.all(
+                                              Radius.circular(30)),
+                                          color: Colors.white,
+                                        ),
+                                        child: TextFormField(
+                                          validator: (value) {
+                                            if (value.isEmpty) {
+                                              return 'Please enter a title';
+                                            }
+                                            return null;
+                                          },
+                                          onSaved: (value) => _title = value,
+                                          controller: _titleController,
+                                          decoration: InputDecoration(
+                                            hintText: "Title",
+                                            border: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            errorBorder: InputBorder.none,
+                                            disabledBorder: InputBorder.none,
+                                          ),
+                                        ),
+                                      ),
                                     ),
+                                    SizedBox(
+                                      height: 15.0,
+                                    ),
+                                    ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                          maxWidth:
+                                              realW(_expandedWidth * 0.70)),
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.all(
+                                              Radius.circular(25)),
+                                          color: Colors.white,
+                                        ),
+                                        child: TextFormField(
+                                          onSaved: (value) =>
+                                              _description = value,
+                                          controller: _descriptionController,
+                                          scrollPhysics:
+                                              BouncingScrollPhysics(),
+                                          minLines: 3,
+                                          maxLines: 5,
+                                          decoration: InputDecoration(
+                                            hintText: "Description",
+                                            border: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            errorBorder: InputBorder.none,
+                                            disabledBorder: InputBorder.none,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ]),
+                                ),
+                                SizedBox(
+                                  height: 15.0,
+                                ),
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                      maxWidth: realW(_expandedWidth * 0.7)),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      borderRadius:
+                                          BorderRadius.all(Radius.circular(30)),
+                                      color: Colors.white,
+                                    ),
+                                    child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.max,
+                                        children: [
+                                          Text(
+                                            "Type",
+                                            style: TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.grey[600]),
+                                          ),
+                                          SizedBox(width: 40),
+                                          DropdownButton<String>(
+                                            value: dropdownValue,
+                                            icon: Icon(Icons.arrow_drop_down),
+                                            iconSize: 20,
+                                            elevation: 12,
+                                            style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .accentColor,
+                                                fontSize: 18),
+                                            underline: Container(
+                                              height: 2,
+                                              color:
+                                                  Theme.of(context).accentColor,
+                                            ),
+                                            onChanged: (String val) {
+                                              setState(() {
+                                                dropdownValue = val;
+                                                _type = val;
+                                              });
+                                            },
+                                            items: <String>[
+                                              'Einstiegsstelle',
+                                              'Tour',
+                                              'Verleih',
+                                              'Kurs',
+                                              'Shop',
+                                              'Verbot'
+                                            ]
+                                                .map<DropdownMenuItem<String>>(
+                                                    (e) => DropdownMenuItem<
+                                                            String>(
+                                                          value: e,
+                                                          child: Text(e),
+                                                        ))
+                                                .toList(),
+                                          )
+                                        ]),
                                   ),
                                 ),
-                              ),
-                              SizedBox(
-                                height: 15.0,
-                              ),
-                              ConstrainedBox(
-                                constraints: BoxConstraints(
-                                    maxWidth: realW(_expandedWidth * 0.70)),
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(25)),
-                                    color: Colors.white,
-                                  ),
-                                  child: TextFormField(
-                                    onSaved: (value) => _description = value,
-                                    controller: _descriptionController,
-                                    scrollPhysics: BouncingScrollPhysics(),
-                                    minLines: 3,
-                                    maxLines: 5,
-                                    decoration: InputDecoration(
-                                      hintText: "Description",
-                                      border: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      errorBorder: InputBorder.none,
-                                      disabledBorder: InputBorder.none,
-                                    ),
-                                  ),
+                                SizedBox(
+                                  height: 20,
                                 ),
-                              ),
-                            ]),
-                          ),
-                          SizedBox(
-                            height: 20.0,
-                          ),
-                          Center(
-                              child: Text(
-                            "Difficulty",
-                            style: Theme.of(context).textTheme.headline6,
-                          )),
-                          ConstrainedBox(
+                                /* ConstrainedBox(
                             constraints: BoxConstraints(
-                                maxWidth: realW(_expandedWidth * 0.85), maxHeight: 30),
+                                maxWidth: realW(_expandedWidth * 0.85),
+                                maxHeight: 30),
                             child: Slider(
                                 inactiveColor: Colors.black,
                                 activeColor: Colors.lightBlueAccent,
@@ -279,47 +347,53 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                                     _difficulty = val;
                                   });
                                 }),
-                          ),
-                          _buildImagePicker(),
-                          RaisedButton(
-                            color: Theme.of(context)
-                                .floatingActionButtonTheme
-                                .backgroundColor,
-                            shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(30))),
-                            onPressed: () async {
-                              if (location == null ||
-                                  !_formKey.currentState.validate()) {
-                                _formKey.currentState.validate();
-                                if (location == null) {
-                                  Scaffold.of(context).showSnackBar(SnackBar(
-                                      content:
-                                          Text('Please choose a location')));
-                                }
-                              } else {
-                                _formKey.currentState.save();
-                                var documentRef = await widget.addGeoPoint(
-                                  LatLng(location.latitude, location.longitude),
-                                  _title,
-                                  _description,
-                                  _difficulty,
-                                  _type,
-
-
-                                );
-                                print(_title);
-
-                                print(documentRef);
-                              }
-                              setState(() {});
-                            },
-                            child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [Text("Done"), Icon(Icons.check)]),
-                          ),
-                        ]),
-                  )
+                          ),*/
+                                _buildImagePicker(),
+                                RaisedButton(
+                                  color: Theme.of(context)
+                                      .floatingActionButtonTheme
+                                      .backgroundColor,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.all(
+                                          Radius.circular(30))),
+                                  onPressed: () async {
+                                    if (location == null ||
+                                        !_formKey.currentState.validate()) {
+                                      _formKey.currentState.validate();
+                                      if (location == null) {
+                                        Scaffold.of(context).showSnackBar(
+                                            SnackBar(
+                                                content: Text(
+                                                    'Please choose a location')));
+                                      }
+                                    } else {
+                                      _formKey.currentState.save();
+                                      await widget.addGeoPoint(
+                                        LatLng(location.latitude,
+                                            location.longitude),
+                                        _title,
+                                        _description,
+                                        _images,
+                                        _type,
+                                      );
+                                      print('finished');
+                                      animateAdd(false);
+                                    }
+                                    setState(() {});
+                                  },
+                                  child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text("Done"),
+                                        Icon(Icons.check)
+                                      ]),
+                                ),
+                              ]),
+                        )
+                      : SizedBox(
+                          height: screenHeight - 55,
+                          width: 10,
+                        ),
                 ]),
           ),
         ),
@@ -371,6 +445,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                                       child: Transform.rotate(
                                         angle: fabController.value * 1.0 * pi,
                                         child: FloatingActionButton(
+                                          heroTag: null,
                                           onPressed: () {
                                             setState(() {});
                                           },
@@ -391,6 +466,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                                             1.0 *
                                             pi,
                                         child: FloatingActionButton(
+                                          heroTag: null,
                                           onPressed: () {
                                             setState(() {
                                               _pickedImage = false;
@@ -426,6 +502,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                     Row(
                       children: [
                         FloatingActionButton(
+                          heroTag: null,
                           onPressed: () async {
                             final ImagePicker picker = ImagePicker();
                             final _imageResource = await picker.getImage(
@@ -445,6 +522,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                         ),
                         SizedBox(width: 15.0),
                         FloatingActionButton(
+                          heroTag: null,
                           onPressed: () async {
                             final ImagePicker picker = ImagePicker();
                             final _imageResource = await picker.getImage(
@@ -492,13 +570,28 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                     child: Stack(children: [
                       ClipPath(
                         clipper: CustomClipMap(),
-                        child: Image.network(
-                          LocationHelper.generateLocationPreviewImage(
-                              lat: location.latitude, lon: location.longitude),
-                          width: realW(_expandedWidth - 50.0),
-                          height: realH(200.0),
-                          fit: BoxFit.cover,
-                        ),
+                        child: Stack(children: [
+                          Center(
+                            child: Image.network(
+                              LocationHelper.generateLocationPreviewImage(
+                                  lat: location.latitude,
+                                  lon: location.longitude),
+                              width: realW(_expandedWidth - 50.0),
+                              height: realH(200.0),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Center(
+                              child: Transform.translate(
+                            offset: Offset(0, -20),
+                            child: Image.asset(
+                              dropdownValue == 'Verbot'
+                                  ? 'verbot-pin.png'
+                                  : 'marker_zwei.png',
+                              height: 50,
+                            ),
+                          )),
+                        ]),
                       ),
                       if (_locationDelete)
                         Align(
@@ -518,6 +611,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                                             1.0 *
                                             pi,
                                         child: FloatingActionButton(
+                                          heroTag: null,
                                           onPressed: () {
                                             setState(() {
                                               location = null;
@@ -554,6 +648,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                     Row(
                       children: [
                         FloatingActionButton(
+                          heroTag: null,
                           onPressed: () {
                             animateAdd(false);
                             widget.locationPickerCallback();
@@ -562,6 +657,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                         ),
                         SizedBox(width: 15.0),
                         FloatingActionButton(
+                          heroTag: null,
                           onPressed: () async {
                             var pos = await locationHandle.getLocation();
                             setState(() {

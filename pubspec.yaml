@@ -32,9 +32,9 @@ dependencies:
 dev_dependencies:
 
   intl: ^0.16.1
-  cloud_firestore: ^0.13.7
-  firebase_auth: ^0.16.1
-  firebase_storage: ^3.1.6
+  cloud_firestore: ^0.14.0+2
+  firebase_auth: ^0.18.0+1
+  firebase_storage: ^4.0.0
   firebase_messaging: ^6.0.16
   webview_flutter: ^0.3.22+1
   simple_animations: ^2.2.1
@@ -42,7 +42,7 @@ dev_dependencies:
   floating_search_bar: ^0.3.0
   flutter_google_places: ^0.2.4
   google_maps_webservice: ^0.0.16
-  firebase_core: ^0.4.5
+  firebase_core: ^0.5.0
   firebase_analytics: ^5.0.16
   firebase_performance: ^0.3.2
   firebase_crashlytics: ^0.1.4+1
@@ -52,6 +52,14 @@ dev_dependencies:
   image_picker: ^0.6.7+6
   flutter_svg: ^0.18.1
   dio: ^3.0.10
+  uuid: 2.2.2
+  shared_preferences: ^0.5.12
+  flutter_rating_bar: ^3.0.1+1
+  fluster: ^1.1.2
+
+
+
+
 
 
 
@@ -78,6 +86,9 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - m1.png
+    - verbot-pin.png
+    - Paddleboard.jpg
     - marker_zwei.png
     - markerV1.png
     - arrow.png
