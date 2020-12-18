@@ -176,7 +176,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
           decoration: BoxDecoration(
               color: Colors.transparent,
               image: DecorationImage(
-                image: AssetImage('sup_ultra_high.png'),
+                image: AssetImage('sup_board_high.png'),
                 fit: BoxFit.fitWidth,
                 alignment: Alignment.topCenter,
               )),

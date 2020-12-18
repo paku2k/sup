@@ -123,7 +123,7 @@ class _AuthScreenState extends State<AuthScreen>
                   decoration: BoxDecoration(
                       image: DecorationImage(
                           image: AssetImage(
-                            'Paddleboard.jpg',
+                            'Paddleboard-01.jpg',
                           ),
                           fit: BoxFit.cover)),
                 ),

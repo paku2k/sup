@@ -122,15 +122,17 @@ class _MapScreenState extends State<MainScreen> {
     radius.add(50.0);
     getFirstPosition = true;
     BitmapDescriptor.fromAssetImage(
-            ImageConfiguration(devicePixelRatio: 2.5), 'marker_zwei.png')
+            ImageConfiguration(devicePixelRatio: 5), 'marker_zwei.png')
         .then((BitmapDescriptor value) => pinMarkerVerbot = value);
     BitmapDescriptor.fromAssetImage(
-            ImageConfiguration(devicePixelRatio: 2.5), 'marker_zwei.png')
+            ImageConfiguration(devicePixelRatio: 5), 'marker_zwei.png')
         .then((value) => pinMarkerNorm = value);
     getBytesFromAsset('assets/m1.png', 200).then((value) {
       rawImage = value;
       clusterMarker = BitmapDescriptor.fromBytes(value);
     });
+
+
 
     super.initState();
   }
