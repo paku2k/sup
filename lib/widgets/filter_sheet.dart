@@ -1,9 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:sup/credentials.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
 import 'dart:async';
 import 'package:uuid/uuid.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../crypto.dart';
+
+class CustomCardClipper extends CustomClipper<Rect> {
+  @override
+  Rect getClip(Size size) {
+    Rect rect =
+        Rect.fromLTRB(0.0, size.height / 2.0, size.width, size.height * 1.1);
+    return rect;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Rect> oldClipper) {
+    return true;
+  }
+}
 
 class Place {
   Place({this.id, this.name});
@@ -22,6 +37,9 @@ class FilterWidget extends StatefulWidget {
 }
 
 class _FilterWidgetState extends State<FilterWidget> {
+  final storage = new FlutterSecureStorage();
+
+
   TextEditingController _searchController = TextEditingController();
   Timer _throttle;
   int _calls = 0;
@@ -37,7 +55,8 @@ class _FilterWidgetState extends State<FilterWidget> {
   @override
   void initState() {
     super.initState();
-    uuid=Uuid().v1();
+
+    uuid = Uuid().v1();
     _heading = "Suggestions";
     _searchController.addListener(_onSearchChanged);
   }
@@ -68,8 +87,11 @@ class _FilterWidgetState extends State<FilterWidget> {
         'https://maps.googleapis.com/maps/api/place/autocomplete/json';
     String type = '(regions)';
     String locRestr = 'location=50.748390, 9.935575&radius=600000&strictbounds';
-    String request = '$baseUrl?input=$text&key=$API_KEY&type=$type&$locRestr&sessiontoken=$uuid';
+    String request =
+        '$baseUrl?input=$text&key=$PLACES_API&type=$type&$locRestr&sessiontoken=$uuid';
+    print(request);
     Response response = await Dio().get(request);
+    print(response);
 
     _calls++;
 
@@ -84,20 +106,17 @@ class _FilterWidgetState extends State<FilterWidget> {
     _displayResultsWidget.clear();
     _displayResults.forEach((element) {
       _displayResultsWidget.add(Padding(
-        padding: EdgeInsets.symmetric(horizontal: 15),
-        child: GestureDetector(
-          onTap: () => _pickPlaceById(element.id),
-          child: Card(
-            color: Color(0xFFEEEEEE),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Row(mainAxisSize: MainAxisSize.max, children: [
-              Padding(
-                  padding: EdgeInsets.symmetric(vertical: 15, horizontal: 15),
-                  child: Text(element.name)),
-            ]),
-            elevation: 10,
-          ),
+        padding: EdgeInsets.only(bottom: 10, right: 15, top: 0, left: 15),
+        child: RaisedButton(
+          elevation: 10,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          onPressed: () => _pickPlaceById(element.id),
+          child: Row(mainAxisSize: MainAxisSize.max, children: [
+            Padding(
+                padding: EdgeInsets.symmetric(vertical: 15, horizontal: 15),
+                child: Text(element.name)),
+          ]),
         ),
       ));
     });
@@ -110,7 +129,8 @@ class _FilterWidgetState extends State<FilterWidget> {
   void _pickPlaceById(String id) async {
     String baseUrl = 'https://maps.googleapis.com/maps/api/place/details/json';
     String fields = 'geometry';
-    String request = '$baseUrl?place_id=$id&key=$API_KEY&fields=$fields&sessiontoken=$uuid';
+    String request =
+        '$baseUrl?place_id=$id&key=$PLACES_API&fields=$fields&sessiontoken=$uuid';
     Response response = await Dio().get(request);
 
     final LatLng result = LatLng(
@@ -122,47 +142,71 @@ class _FilterWidgetState extends State<FilterWidget> {
 
   @override
   Widget build(BuildContext context) {
+
+
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Container(
+            width: 200,
             decoration: BoxDecoration(
-                color: Theme.of(context).accentColor,
+                color: Colors.white,
                 borderRadius:
                     BorderRadius.vertical(top: Radius.circular(25.0))),
-            padding: const EdgeInsets.symmetric(vertical: 20.0),
-            child: Center(
-              child: Text(
-                "Search",
-                style: Theme.of(context)
-                    .textTheme
-                    .headline6
-                    .copyWith(color: Colors.white),
+            padding: const EdgeInsets.symmetric(vertical: 00.0),
+            child: Transform.translate(
+              offset: Offset(0.0, -42.0),
+              child: Card(
+                color: Theme.of(context).buttonColor,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(50))),
+                child: Padding(
+                  padding:
+                      EdgeInsets.only(top: 20, bottom: 20, left: 20, right: 20),
+                  child: Align(
+                      alignment: Alignment.topCenter,
+                      child: Container(
+                          child: Icon(
+                        Icons.search,
+                        size: 35,
+                      ))),
+                ),
               ),
             ),
           ),
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-            child: TextField(
-              controller: _searchController,
-              autofocus: true,
-              decoration: InputDecoration(
-                  hintText: 'Search',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30.0)),
-                  focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30.0)),
-                  contentPadding: EdgeInsets.symmetric(vertical: 0),
-                  fillColor: Color(0xFFEEEEEE),
-                  filled: true),
+
+          Transform.translate(
+            offset: Offset(0.0, -44.0),
+            child: Container(
+              color: Colors.white,
+              padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+              child: TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                    hintText: 'Suchen',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30.0)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30.0)),
+                    contentPadding: EdgeInsets.symmetric(vertical: 0),
+                    fillColor: Color(0xFFEEEEEE),
+                    filled: true),
+              ),
             ),
           ),
-          Column(children: _displayResultsWidget),
-
+          Transform.translate(
+            offset: Offset(0.0, -42.0),
+            child: Container(
+                color: Colors.white,
+                child: Column(children: _displayResultsWidget)),
+          ),
         ],
       ),
     );

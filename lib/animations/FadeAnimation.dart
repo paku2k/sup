@@ -48,8 +48,8 @@ class FadeAnimationApple extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tween = MultiTween<AniProps>()
-      ..add(AniProps.opacity, 0.0.tweenTo(1.0), 1000.milliseconds)
-      ..add(AniProps.Ytranslate, (-120.0).tweenTo(0.0), 500.milliseconds,
+      ..add(AniProps.opacity, 0.0.tweenTo(1.0), 600.milliseconds)
+      ..add(AniProps.Ytranslate, (-120.0).tweenTo(0.0), 650.milliseconds,
           Curves.easeInCubic);
 
     return CustomAnimation(

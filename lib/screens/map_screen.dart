@@ -66,11 +66,12 @@ class MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
+    userLocation=widget.initialPosition;
+
   }
 
   @override
   Widget build(BuildContext context) {
-    userLocation=widget.initialPosition;
     return GoogleMap(
       mapToolbarEnabled: false,
       myLocationButtonEnabled: false,

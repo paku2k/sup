@@ -3,6 +3,7 @@ import 'screens/auth_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'screens/main_screen.dart';
+import 'screens/list_screen.dart';
 import 'ui-helper.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_performance/firebase_performance.dart';
@@ -28,13 +29,27 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'Flutter Demo',
+
       theme: ThemeData(
         
 
         floatingActionButtonTheme: FloatingActionButtonThemeData(backgroundColor: Colors.deepOrangeAccent),
-        primarySwatch: Colors.deepOrange,
+        primarySwatch: Colors.lightBlue,
         accentColor: Colors.deepOrangeAccent,
         buttonColor: Color(0xFF1BAFC5),
+        fontFamily: 'Raleway',
+        textTheme: ThemeData.light().textTheme.copyWith(
+          bodyText1: TextStyle(
+            color: Color.fromRGBO(20, 51, 51, 1),
+          ),
+          bodyText2: TextStyle(
+            color: Color.fromRGBO(20, 51, 51, 1),
+          ),
+          headline6: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.normal,
+              fontFamily: 'RobotoCondensed'),
+        ),
 
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),

@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import '../ui-helper.dart';
 import 'dart:math';
 import '../location_helper.dart';
+import '../crypto.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 final double _expandedWidth = 392.0;
 final double _retractedWidth = 120.0;
@@ -26,6 +28,9 @@ class AddWidget extends StatefulWidget {
 
 class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
   String dropdownValue = 'Einstiegsstelle';
+  final storage = FlutterSecureStorage();
+
+  bool _isSaving = false;
 
   String get _sliderLabel {
     if (_difficulty == 0.0) {
@@ -56,6 +61,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
         vsync: this);
     curve = CurvedAnimation(
         parent: animationControllerAdd, curve: Curves.easeOutQuart);
+
     animation = Tween(begin: _currentX, end: open ? _renderHeight - 80.0 : 0.0)
         .animate(curve)
           ..addListener(() {
@@ -75,10 +81,17 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
     animationControllerAdd.forward();
   }
 
+  @override
+  void initState() {
+    super.initState();
+  }
+
   void getRenderBox(_) {
     final RenderBox _renderBoxContainer =
         _containerKey.currentContext.findRenderObject();
     _renderHeight = _renderBoxContainer.size.height;
+    print('RenderHeight:' + _renderHeight.toString());
+    print('RenderWidth:' + _renderBoxContainer.size.width.toString());
   }
 
   void onAddVerticalUpdate(details) {
@@ -183,7 +196,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                     size: realW(35.0),
                     color: Colors.white,
                   ),
-                  _currentX != 0.0
+                  _currentX != -1.0
                       ? SingleChildScrollView(
                           child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
@@ -209,15 +222,19 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                                         ),
                                         child: TextFormField(
                                           validator: (value) {
+                                            Future.delayed(
+                                              Duration(milliseconds: 20),
+                                            ).then((value) => animateAdd(true));
                                             if (value.isEmpty) {
-                                              return 'Please enter a title';
+                                              return 'Bitte lege einen Titel fest';
                                             }
+
                                             return null;
                                           },
                                           onSaved: (value) => _title = value,
                                           controller: _titleController,
                                           decoration: InputDecoration(
-                                            hintText: "Title",
+                                            hintText: "Titel",
                                             border: InputBorder.none,
                                             focusedBorder: InputBorder.none,
                                             enabledBorder: InputBorder.none,
@@ -251,7 +268,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                                           minLines: 3,
                                           maxLines: 5,
                                           decoration: InputDecoration(
-                                            hintText: "Description",
+                                            hintText: "Beschreibung",
                                             border: InputBorder.none,
                                             focusedBorder: InputBorder.none,
                                             enabledBorder: InputBorder.none,
@@ -329,7 +346,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                                   ),
                                 ),
                                 SizedBox(
-                                  height: 20,
+                                  height: 30,
                                 ),
                                 /* ConstrainedBox(
                             constraints: BoxConstraints(
@@ -361,12 +378,18 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                                         !_formKey.currentState.validate()) {
                                       _formKey.currentState.validate();
                                       if (location == null) {
-                                        Scaffold.of(context).showSnackBar(
-                                            SnackBar(
-                                                content: Text(
-                                                    'Please choose a location')));
+                                        Scaffold.of(context)
+                                            .showSnackBar(SnackBar(
+                                          content: Text(
+                                              'Bitte lege einen Standort fest'),
+                                          duration:
+                                              Duration(milliseconds: 2000),
+                                        ));
                                       }
                                     } else {
+                                      setState(() {
+                                        _isSaving = true;
+                                      });
                                       _formKey.currentState.save();
                                       await widget.addGeoPoint(
                                         LatLng(location.latitude,
@@ -377,16 +400,33 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                                         _type,
                                       );
                                       print('finished');
+                                      _isSaving = false;
                                       animateAdd(false);
+                                      _formKey.currentState.reset();
+                                      _pickedImage=false;
+                                      _images=[];
+                                      _imageNumber=0;
+                                      _imageDelete=false;
+                                      _locationDelete=false;
+                                      _descriptionController.text="";
+                                      _titleController.text="";
+                                      _title="";
+                                      _description="";
+                                      _type="Einstiegsstelle";
+                                      location=null;
                                     }
                                     setState(() {});
                                   },
-                                  child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text("Done"),
-                                        Icon(Icons.check)
-                                      ]),
+                                  child: _isSaving
+                                      ? Transform.scale(
+                                          scale: 0.7,
+                                          child: CircularProgressIndicator(backgroundColor: Theme.of(context).primaryColor,))
+                                      : Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                              Text("Fertig"),
+                                              Icon(Icons.check)
+                                            ]),
                                 ),
                               ]),
                         )
@@ -405,7 +445,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
     //TODO: Build a carousel with more than one image
     return SizedBox(
       width: realW(_expandedWidth - 70.0),
-      height: realH(250.0),
+      height: realH(200.0),
       child: Center(
         child: _pickedImage
             ? Padding(
@@ -418,12 +458,12 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                     });
                   },
                   child: Container(
-                    height: realH(150.0),
+                    height: realH(200.0),
                     child: Stack(children: [
                       ClipPath(
                         clipper: CustomClipImage(),
-                        child: Image.asset(
-                          _images[_imageNumber - 1].path,
+                        child: Image.file(
+                          _images[_imageNumber - 1],
                           width: realW(_expandedWidth - 50.0),
                           height: realH(200.0),
                           fit: BoxFit.cover,
@@ -470,6 +510,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                                           onPressed: () {
                                             setState(() {
                                               _pickedImage = false;
+                                              _imageDelete=false;
                                             });
                                           },
                                           child: Icon(Icons.delete),
@@ -495,7 +536,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      'Image',
+                      'Bild',
                       style: Theme.of(context).textTheme.headline6,
                     ),
                     SizedBox(height: 15.0),
@@ -575,7 +616,8 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                             child: Image.network(
                               LocationHelper.generateLocationPreviewImage(
                                   lat: location.latitude,
-                                  lon: location.longitude),
+                                  lon: location.longitude,
+                                  GOOGLE_API_KEY: GOOGLE_API),
                               width: realW(_expandedWidth - 50.0),
                               height: realH(200.0),
                               fit: BoxFit.cover,
@@ -615,6 +657,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                                           onPressed: () {
                                             setState(() {
                                               location = null;
+                                              _locationDelete=false;
                                             });
                                           },
                                           child: Icon(Icons.delete),
@@ -641,7 +684,7 @@ class AddWidgetState extends State<AddWidget> with TickerProviderStateMixin {
                   children: <Widget>[
                     SizedBox(height: 30),
                     Text(
-                      'Location',
+                      'Lage',
                       style: Theme.of(context).textTheme.headline6,
                     ),
                     SizedBox(height: 30.0),

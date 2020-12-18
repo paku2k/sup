@@ -22,8 +22,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:location/location.dart' as Loc;
 import 'package:rxdart/rxdart.dart';
 import 'dart:async';
+import '../crypto.dart';
 import 'package:fluster/fluster.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 
+import '../widgets/slider_menu.dart';
 import '../model/custom_marker.dart';
 import '../widgets/filter_sheet.dart';
 import '../ui-helper.dart';
@@ -75,6 +79,12 @@ class _MapScreenState extends State<MainScreen> {
   double currentListPosition = -1.0;
   double zoomLevel;
 
+  RemoteConfig remoteConfig;
+
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  final storage = new FlutterSecureStorage();
+
   bool locationPickerMode = false;
   LatLng pickedLocation;
   double opacity = 0.0;
@@ -92,6 +102,23 @@ class _MapScreenState extends State<MainScreen> {
   @override
   void initState() {
     _initUser();
+
+    RemoteConfig.instance.then((value) {
+      remoteConfig = value;
+      Future.wait([
+        remoteConfig.fetch(
+          expiration: Duration(hours: 5),
+        ),
+        remoteConfig.activateFetched()
+      ]).then((value) {
+        GOOGLE_API = remoteConfig.getString('GoogleAPI');
+        PLACES_API = remoteConfig.getString('PlacesAPI');
+        print('keys: '+PLACES_API);
+      });
+    });
+
+    //TODO: Configure encryption and remote storage for keys  https://medium.com/@eggzotic/flutter-ready-encryption-utility-697aaed97012
+
     radius.add(50.0);
     getFirstPosition = true;
     BitmapDescriptor.fromAssetImage(
@@ -129,8 +156,26 @@ class _MapScreenState extends State<MainScreen> {
   void _initUser() async {
     auth = FirebaseAuth.instance;
     userInfo = auth.currentUser;
-    var userDoc = await firestore.collection('user').doc(userInfo.uid).get();
-    userName = userDoc.data()['name'];
+    try {
+      var userDoc = await firestore.collection('user').doc(userInfo.uid).get();
+      userName = userDoc.data()['name'];
+    } catch (e) {
+      FirebaseAuth.instance.signOut();
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(
+              'Beim Einloggen ist etwas schiefgelaufen, versuche es nocheinmal'),
+          actions: [
+            FlatButton.icon(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: Icon(Icons.exit_to_app),
+              label: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -148,6 +193,9 @@ class _MapScreenState extends State<MainScreen> {
 
   void opacityCallback(double pcnt) {
     setState(() {
+      if (opacity != 0) {
+        markerWindow = null;
+      }
       opacity = pcnt;
     });
   }
@@ -185,6 +233,8 @@ class _MapScreenState extends State<MainScreen> {
     screenHeight = MediaQuery.of(context).size.height;
     screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
+        key: _scaffoldKey,
+        drawer: SliderMenu(paddleItems),
         resizeToAvoidBottomPadding: false,
         body: SizedBox(
           width: screenWidth,
@@ -198,11 +248,13 @@ class _MapScreenState extends State<MainScreen> {
                   return Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasData && getFirstPosition) {
+                  initPos = LatLng(53.426543, 10.043859);
                   var lat = snapshot.data.getDouble('userLat');
                   var lon = snapshot.data.getDouble('userLon');
                   if (lat != null && lon != null) {
                     initPos = LatLng(lat, lon);
                   }
+
                   getFirstPosition = false;
                 }
                 return MapScreen(
@@ -239,7 +291,7 @@ class _MapScreenState extends State<MainScreen> {
                                       borderRadius: BorderRadius.all(
                                           Radius.circular(30))),
                                   onPressed: _getScreenPosForAdd,
-                                  child: Text("Choose this location"),
+                                  child: Text("Diesen Ort wählen"),
                                 )
                               : dirtyScreenPosition
                                   ? RaisedButton(
@@ -256,7 +308,10 @@ class _MapScreenState extends State<MainScreen> {
                                           dirtyScreenPosition = false;
                                         });
                                       },
-                                      child: Text("Search here"),
+                                      child: Text(
+                                        "Hier Suchen",
+                                        style: TextStyle(color: Colors.white),
+                                      ),
                                     )
                                   : Container()
                           : Container(),
@@ -278,11 +333,13 @@ class _MapScreenState extends State<MainScreen> {
             locationPickerMode
                 ? Container()
                 : SimpleButtonWidget(
+                    heroTag: 'settings',
                     icon: Icons.settings,
                     isTop: true,
                     isLeft: true,
-                  ),
+                    onTap: () => _scaffoldKey.currentState.openDrawer()),
             SimpleButtonWidget(
+              heroTag: 'search',
               icon: Icons.search,
               isTop: true,
               isLeft: false,
@@ -293,11 +350,19 @@ class _MapScreenState extends State<MainScreen> {
                 : ToggleButtonWidget(
                     currentX: _listAbsolute,
                     isMap: _isMap,
-                    onDrag: (_) {
-                      Navigator.of(context).push(_createRoute(paddleItems));
+                    onDrag: (_) async {
+                      bool result = await Navigator.of(context)
+                          .push(_createRoute(paddleItems));
+                      if (result) {
+                        showFilter();
+                      }
                     },
-                    onTap: () {
-                      Navigator.of(context).push(_createRoute(paddleItems));
+                    onTap: () async {
+                      bool result = await Navigator.of(context)
+                          .push(_createRoute(paddleItems));
+                      if (result) {
+                        showFilter();
+                      }
                     },
                   ),
             opacity != 0
@@ -330,12 +395,14 @@ class _MapScreenState extends State<MainScreen> {
         ));
   }
 
-  Route _createRoute(List<PaddleItem> items) {
+  Route<bool> _createRoute(List<PaddleItem> items) {
     return PageRouteBuilder(
+      settings: RouteSettings(name: 'postition', arguments: ''),
       transitionDuration: Duration(milliseconds: 600),
       pageBuilder: (context, animation, secondaryAnimation) {
         return ListScreen(
           items: items,
+          isOwnSpots: false,
         );
       },
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -398,7 +465,9 @@ class _MapScreenState extends State<MainScreen> {
           'Resubscribing: Center point: ${center.latitude.toString()}, ${center.longitude.toString()}, and radius: ${rad.toString()}');
       return geoflutterfire.collection(collectionRef: ref).within(
           center: center, radius: rad, field: 'position', strictMode: true);
-    }).listen(_updateItems);
+    }).listen(_updateItems)
+      ..onError((e) => print(
+          'This is an error while fetching the latest sups: ' + e.toString()));
   }
 
   Future<void> addPaddleItem(LatLng pos, String name, String description,
@@ -448,6 +517,7 @@ class _MapScreenState extends State<MainScreen> {
     print(docList);
     docList.forEach((DocumentSnapshot doc) {
       GeoPoint pos = doc.data()['position']['geopoint'];
+      print("Current user loc= ${_mapKey.currentState.userLocation}");
       GeoFirePoint userLocation = GeoFirePoint(
           _mapKey.currentState.userLocation.latitude,
           _mapKey.currentState.userLocation.longitude);
@@ -479,11 +549,7 @@ class _MapScreenState extends State<MainScreen> {
     paddleItems.forEach((element) {
       var marker = CustomMarker(
         onTap: () {
-          setState(() {
-            markerWindowDirty = true;
-
-            markerWindow = InfoDisplay(element);
-          });
+          markerOnTap(element);
         },
         id: element.id,
         position: element.location,
@@ -493,6 +559,14 @@ class _MapScreenState extends State<MainScreen> {
     });
 
     _setFlusterMarkers();
+  }
+
+  void markerOnTap(element) {
+    setState(() {
+      markerWindowDirty = true;
+
+      markerWindow = InfoDisplay(element);
+    });
   }
 
   Future<void> _setFlusterMarkers() async {
