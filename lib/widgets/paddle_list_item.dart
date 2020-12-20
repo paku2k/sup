@@ -147,7 +147,7 @@ class _PaddleListItemState extends State<PaddleListItem>
                         SizedBox(width: 10),
                         widget.item.rating == -1.0
                             ? Text('(No votes)')
-                            : Text('(${widget.item.rating})'),
+                            : Text('(${widget.item.rating.toStringAsFixed(1)})'),
                       ]),
                     ),
                   ],

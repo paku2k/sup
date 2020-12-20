@@ -4,6 +4,8 @@ import '../widgets/info_display.dart';
 
 import 'dart:math' show cos, sqrt, asin;
 
+
+import '../providers/user.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
@@ -47,10 +49,8 @@ class MainScreen extends StatefulWidget {
 class _MapScreenState extends State<MainScreen> {
   FirebaseFirestore firestore = FirebaseFirestore.instance;
   FirebaseAuth auth;
-  User userInfo;
   LatLng initPos;
   bool getFirstPosition;
-  String userName;
 
   Widget markerWindow;
   Fluster<CustomMarker> fluster;
@@ -117,19 +117,24 @@ class _MapScreenState extends State<MainScreen> {
       });
     });
 
-    //TODO: Configure encryption and remote storage for keys  https://medium.com/@eggzotic/flutter-ready-encryption-utility-697aaed97012
 
     radius.add(50.0);
     getFirstPosition = true;
     BitmapDescriptor.fromAssetImage(
-            ImageConfiguration(devicePixelRatio: 5), 'marker_zwei.png')
+            ImageConfiguration(devicePixelRatio: 1), 'marker_zwei.png')
         .then((BitmapDescriptor value) => pinMarkerVerbot = value);
     BitmapDescriptor.fromAssetImage(
-            ImageConfiguration(devicePixelRatio: 5), 'marker_zwei.png')
+            ImageConfiguration(devicePixelRatio: 1), 'marker_zwei.png')
         .then((value) => pinMarkerNorm = value);
     getBytesFromAsset('assets/m1.png', 200).then((value) {
       rawImage = value;
       clusterMarker = BitmapDescriptor.fromBytes(value);
+    });
+
+    getBytesFromAsset('assets/marker_zwei.png', 200).then((value) {
+      rawImage = value;
+      pinMarkerVerbot = BitmapDescriptor.fromBytes(value);
+      pinMarkerNorm = pinMarkerVerbot;
     });
 
 
@@ -158,9 +163,11 @@ class _MapScreenState extends State<MainScreen> {
   void _initUser() async {
     auth = FirebaseAuth.instance;
     userInfo = auth.currentUser;
+    uid = userInfo.uid;
     try {
       var userDoc = await firestore.collection('user').doc(userInfo.uid).get();
       userName = userDoc.data()['name'];
+
     } catch (e) {
       FirebaseAuth.instance.signOut();
       showDialog(
@@ -532,6 +539,8 @@ class _MapScreenState extends State<MainScreen> {
         rating = doc.data()['rating'].toDouble();
       }
 
+
+
       PaddleItem item = PaddleItem(
           distance: distance,
           id: doc.id,
@@ -575,7 +584,7 @@ class _MapScreenState extends State<MainScreen> {
     fluster = Fluster<CustomMarker>(
         minZoom: 0, // The min zoom at clusters will show
         maxZoom: 12, // The max zoom at clusters will show
-        radius: 150, // Cluster radius in pixels
+        radius: 250, // Cluster radius in pixels
         extent: 1024, // Tile extent. Radius is calculated with it.
         nodeSize: 64, // Size of the KD-tree leaf node.
         points: markers, // The list of markers created before
@@ -592,7 +601,7 @@ class _MapScreenState extends State<MainScreen> {
             onTap: cluster.isCluster
                 ? () {
                     var cu = CameraUpdate.newLatLngZoom(
-                        LatLng(lat, lng), zoomLevel + 1.0);
+                        LatLng(lat, lng), 12.0);
                     _mapKey.currentState.mapController.animateCamera(cu);
                   }
                 : null,

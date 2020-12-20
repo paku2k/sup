@@ -173,6 +173,7 @@ class _FilterWidgetState extends State<FilterWidget> {
                       child: Container(
                           child: Icon(
                         Icons.search,
+                        color: Theme.of(context).buttonColor,
                         size: 35,
                       ))),
                 ),
