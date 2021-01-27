@@ -12,6 +12,8 @@ import 'package:uuid/uuid.dart';
 import 'package:platform/platform.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:syncfusion_flutter_maps/maps.dart';
+
 import 'dart:io';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -174,7 +176,7 @@ class _MapScreenState extends State<MainScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: Text(
-              'Beim Einloggen ist etwas schiefgelaufen, versuche es nocheinmal'),
+              'Beim Einloggen ist etwas schiefgelaufen, versuche es noch einmal'),
           actions: [
             FlatButton.icon(
               onPressed: () => Navigator.of(context).pop(),

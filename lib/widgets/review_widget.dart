@@ -3,6 +3,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../ui-helper.dart';
 
 
+
 class ReviewWidget extends StatefulWidget {
   final Function submit;
   final ScrollController scrollController;
@@ -12,6 +13,7 @@ class ReviewWidget extends StatefulWidget {
 }
 
 class _ReviewWidgetState extends State<ReviewWidget> {
+
   bool reviewLoading = false;
   double rating = 5.0;
   String reviewText = '';
@@ -69,41 +71,46 @@ class _ReviewWidgetState extends State<ReviewWidget> {
                   offset: Offset(0.0, -42.0),
                   child: Container(
                       color: Colors.white,
-                      child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              RatingBar(
+                      child: StatefulBuilder(
+                        builder: (ctx, setState){ return Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                RatingBar(
 
-                                  itemSize: screenWidth / 8.0,
-                                  initialRating: 4.5,
-                                  minRating: 0,
-                                  direction: Axis.horizontal,
-                                  allowHalfRating: true,
-                                  itemCount: 5,
-                                  itemPadding:
-                                      EdgeInsets.symmetric(horizontal: 4.0),
-                                  itemBuilder: (context, _) => Icon(
-                                        Icons.star,
-                                        color: Theme.of(context).accentColor,
-                                      ),
-                                  onRatingUpdate: (rating) {
-                                    print(
-                                      stateRating.toString(),
-                                    );
-                                    setState(() {
+                                    itemSize: screenWidth / 8.0,
+                                    initialRating: 4.5,
+                                    minRating: 0,
+                                    direction: Axis.horizontal,
+                                    allowHalfRating: true,
+                                    itemCount: 5,
+                                    itemPadding:
+                                        EdgeInsets.symmetric(horizontal: 4.0),
+                                    itemBuilder: (context, _) => Icon(
+                                          Icons.star,
+                                          color: Theme.of(context).accentColor,
+                                        ),
+                                    onRatingUpdate: (rating) {
 
-                                      stateRating = rating;
-                                    });
-                                  }),
-                              Text(
-                                stateRating.toString(),
-                                textScaleFactor: 1.4,
-                                overflow: TextOverflow.fade,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.bodyText2,
-                              )
-                            ]),
+                                      print(
+                                       "called state rating"
+                                      );
+                                      setState(() {
+
+                                        stateRating = rating;
+                                      });
+                                    }),
+                                GestureDetector(
+                                  child: Text(
+                                    stateRating.toString(),
+                                    textScaleFactor: 1.4,
+                                    overflow: TextOverflow.fade,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context).textTheme.bodyText2,
+                                  ),
+                                )
+                              ]);}
+                      ),
                       ),
                 ),
                 SizedBox(

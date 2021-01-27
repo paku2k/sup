@@ -53,6 +53,7 @@ dev_dependencies:
   maps_launcher: ^1.2.2+2
   drawerbehavior: ^1.1.4
   flutter_secure_storage: ^3.3.5
+  syncfusion_flutter_maps: ^18.4.35-beta
 
   geoflutterfire: ^2.1.0
   image_picker: ^0.6.7+12

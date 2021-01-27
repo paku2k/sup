@@ -21,6 +21,7 @@ class DetailScreen extends StatefulWidget {
 }
 
 class _DetailScreenState extends State<DetailScreen> {
+  PersistentBottomSheetController sheetController;
   bool _visible = false;
   @override
   Widget build(BuildContext context) {
@@ -279,12 +280,12 @@ class _DetailScreenState extends State<DetailScreen> {
 
   void showReview() {
     showModalBottomSheet(
+
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(25.0))),
       backgroundColor: Colors.white,
       context: context,
-      isScrollControlled: true,
-      builder: (context) { print(MediaQuery.of(context).viewInsets.bottom);
+      builder: (context) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
